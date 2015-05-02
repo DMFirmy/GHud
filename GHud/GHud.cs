@@ -1,426 +1,257 @@
-﻿//#define TEST
-
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.IO;
-
+using Color = System.Drawing.Color;
+#if !DEBUG
 using UnityEngine;
-
-// When complied in debug mode, we override a few things so we can run without KSP
-#if TEST
-namespace UnityEngine
-{
-    public class Debug
-    {
-        public static void Log(string s) { Console.WriteLine(s); }
-        public static void LogWarning(string s) { Console.WriteLine(s); }
-        public static void LogError(string s) { Console.WriteLine(s); }
-    }
-}
-
-public class MonoBehaviour
-{
-
-}
 #endif
 
 namespace GHud
 {
-    [KSPAddon(KSPAddon.Startup.Instantly, true)]
-    public class GHud : MonoBehaviour
-    {
-        List<Device> devices = new List<Device>();  
-        
-        //private static string appPath = KSPUtil.ApplicationRootPath.Replace("\\", "/") + "GameData/";
+	[KSPAddon(KSPAddon.Startup.Instantly, true)]
+	public class GHud : MonoBehaviour
+	{
+		#region Fields
+		// ReSharper disable once FieldCanBeMadeReadOnly.Local
+		private List<Device> _devices = new List<Device>();
+		private static GHud _gHudMain;
+		private float _lastUpdate;
+		private int _config;
+		private bool _lcdInitialized;
+		#endregion
 
-		public static GHud GHudmain;
+		#region Methods
+		public void OnDestroy()
+		{
+			foreach (var dev in _devices)
+			{
+				dev.Dispose();
+			}
+			if (_lcdInitialized)
+			{
+				NativeMethods.LcdDeInit();
+			}
+		}
 
-        public bool test_mode = false;
-        
-        private float last_update = 0.0f;
-        private int config = 0;
+		public void CfgCallback(int connection)
+		{
+			_config = connection;
+		}
 
-        private bool lcd_initialized = false;
+		private static void ButtonUp(object sender, EventArgs e)
+		{
+		}
 
-        private String[] font_names = new String[]  {"Inconsolata Medium", "Arial", "Arial Narrow", "Consolas", "Terminal", "Segoe UI Light", "Segoe UI"};
+		private static void ButtonDown(object sender, EventArgs e)
+		{
+		}
 
-        public void OnDestroy()
-        {
-            foreach (Device dev in devices)
-            {
-                dev.Dispose();
-            }
-            if(lcd_initialized)
-                DMcLgLCD.LcdDeInit();
-        }
-        
-        public void cfgCallback(int cfgConnection)
-        {
-            config = cfgConnection;
-        }
-     
-        public void TestMode()
-        {
-            test_mode = true;
-        }
+		private static void ButtonLeft(object sender, EventArgs e)
+		{
+		}
 
-        protected void ButtonUp(Device dev)
-        {
-        }
+		private static void ButtonRight(object sender, EventArgs e)
+		{
+		}
 
-        protected void ButtonDown(Device dev)
-        {
-        }
+		private static void ButtonOk(object sender, EventArgs e)
+		{
+		}
 
-        public void ButtonLeft(Device dev)
-        {
-        }
+		private static void ButtonCancel(object sender, EventArgs e)
+		{
+		}
 
-        public void ButtonRight(Device dev)
-        {
-        }
+		// Cycle through the existing modules
+		private static void ButtonMenu(object sender, EventArgs e)
+		{
+			var dev = sender as Device;
+			if (dev == null)
+			{
+				return;
+			}
 
-        public void ButtonOk(Device dev)
-        {
-        }
+			var activate = false;
+			var activated = false;
+			foreach (var dmod in dev.Modules)
+			{
+				if (activate)
+				{
+					dmod.Activate();
+					activated = true;
+					break;
+				}
+				if (!dmod.IsActive)
+				{
+					continue;
+				}
+				activate = true;
+				dmod.Deactivate();
+			}
 
-        public void ButtonCancel(Device dev)
-        {
-        }
+			if (!activated)
+			{
+				dev.Modules[0].Activate();
+			}
+		}
 
-        // Cycle through the existing modules
-        public void ButtonMenu(Device dev)
-        {
-            bool activate = false;
-            bool activated = false;
+		public void Awake()
+		{
+			if (_gHudMain != null)
+			{
+				return;
+			}
+			_gHudMain = this;
+#if !DEBUG
+			DontDestroyOnLoad(_gHudMain);
+#endif
+			if (!_lcdInitialized)
+			{
+				NativeMethods.LcdInit();
+				_lcdInitialized = true;
+			}
 
-            foreach (DisplayModule dmod in dev.modules)
-            {
-                if (activate)
-                {
-                    dmod.Activate();
-                    activated = true;
-                    break;
-                }
-                if (dmod.active)
-                {
-                    activate = true;
-                    dmod.Deactivate();
-                }
-            }
+			const string vesselMonicer = "✈";
+			const string targetMonicer = "+";
 
-            if (!activated)
-            {
-                dev.modules[0].Activate();
-            }
-        }
+			#region Black & White Device
+			Device device = new DeviceBw();
+			if (device.IsValid())
+			{
+				_devices.Add(device);
 
-             
-        public void OnGUI()
-        {
-            //StartCoroutine(Snarfer());
-            //Snarfer();
-        }
+				var orbitInfoColor = Color.Black;
+				var orbitGraphColor = Color.Yellow;
 
-        public void Awake()
-        {
-			if (GHudmain != null) return;
-			GHudmain = this;
-			UnityEngine.Object.DontDestroyOnLoad(GHudmain);
+				var vesselInfo = new OrbitInfo(device, vesselMonicer, orbitInfoColor, orbitInfoColor);
+				vesselInfo.Activate();
+				device.Modules.Add(vesselInfo);
 
-            if (!lcd_initialized)
-            {
-                DMcLgLCD.LcdInit();
-                lcd_initialized = true;
-            }
+				var targetinfo = new OrbitInfo(device, targetMonicer, orbitInfoColor, orbitInfoColor)
+				{
+					IsTargetTypeModule = true
+				};
+				device.Modules.Add(targetinfo);
 
-            Device bw_dev = new DeviceBW();
-            Device color_dev = new DeviceQVGA();
+				var vesselGraph = new OrbitGraph(device, orbitGraphColor, vesselMonicer);
+				device.Modules.Add(vesselGraph);
 
-            if (bw_dev != null && bw_dev.isValid())
-            {
-                devices.Add(bw_dev);
-                OrbitInfo initialbw = new OrbitInfo(bw_dev, "✈", System.Drawing.Color.Black, System.Drawing.Color.Black);
-                initialbw.Activate();
-                bw_dev.modules.Add(initialbw);
+				var targetGraph = new OrbitGraph(device, orbitGraphColor, targetMonicer)
+				{
+					IsTargetTypeModule = true
+				};
+				device.Modules.Add(targetGraph);
+			}
+			#endregion
 
-                
-                OrbitInfo targetinfo = new OrbitInfo(bw_dev, "+", System.Drawing.Color.Black, System.Drawing.Color.Black);
-                targetinfo.is_target_type_module = true;
-                bw_dev.modules.Add(targetinfo);
+			#region Color Device
+			device = new DeviceQvga();
+			if (device.IsValid())
+			{
+				_devices.Add(device);
 
-                bw_dev.modules.Add(new OrbitGraph(bw_dev, System.Drawing.Color.Yellow, "✈"));
-                OrbitGraph tgt_orbitgraph = new OrbitGraph(bw_dev, System.Drawing.Color.Yellow, "+");
-                tgt_orbitgraph.is_target_type_module = true;
-                bw_dev.modules.Add(tgt_orbitgraph);
-            }
+				var vesselInfo = new VesselInfo(device);
+				vesselInfo.Activate();
+				device.Modules.Add(vesselInfo);
 
-            if (color_dev != null && color_dev.isValid())
-            {
-                devices.Add(color_dev);
-                VesselInfo initialcolor = new VesselInfo(color_dev);
-                initialcolor.Activate();
-                color_dev.modules.Add(initialcolor);
-                //color_dev.modules.Add(new OrbitInfo(color_dev, "✈", System.Drawing.Color.FromArgb(0xee, 0xee, 0x00), System.Drawing.Color.FromArgb(0xaa, 0xaa, 0x44)));
-                /*
-                OrbitInfo col_targetinfo = new OrbitInfo(color_dev, "⊹", System.Drawing.Color.LightBlue, System.Drawing.Color.MediumPurple);
-                col_targetinfo.is_target_type_module = true;
-                color_dev.modules.Add(col_targetinfo);
-                 */
-                color_dev.modules.Add(new OrbitGraph(color_dev, System.Drawing.Color.Yellow, "✈"));
-                OrbitGraph tgt_orbitgraph = new OrbitGraph(color_dev, System.Drawing.Color.LightBlue, "+");
-                tgt_orbitgraph.is_target_type_module = true;
-                color_dev.modules.Add(tgt_orbitgraph);
-            }
-            
-            foreach (Device dev in devices)
-            {
-                dev.ButtonUP += new Device.ButtonHandler(ButtonUp);
-                dev.ButtonDOWN += new Device.ButtonHandler(ButtonDown);
-                dev.ButtonLEFT += new Device.ButtonHandler(ButtonLeft);
-                dev.ButtonRIGHT += new Device.ButtonHandler(ButtonRight);
-                dev.ButtonOK += new Device.ButtonHandler(ButtonOk);
-                dev.ButtonCANCEL += new Device.ButtonHandler(ButtonCancel);
-                dev.ButtonMENU += new Device.ButtonHandler(ButtonMenu);
+				var vessleGraphColor = Color.Yellow;
+				var vessleGraph = new OrbitGraph(device, vessleGraphColor, vesselMonicer);
+				device.Modules.Add(vessleGraph);
 
-                dev.DisplayFrame();
-            }
-        }
+				var targetGraphColor = Color.LightBlue;
+				var targetGraph = new OrbitGraph(device, targetGraphColor, targetMonicer)
+				{
+					IsTargetTypeModule = true
+				};
+				device.Modules.Add(targetGraph);
+			}
+			#endregion
 
-        public void Update()
-        {
-            float update_delta = 1.0f;
-            
-#if !TEST
-            //if (!HighLogic.LoadedSceneIsFlight)
-                //return;
-           
-            update_delta = Time.time - last_update;
-             
-            if (update_delta < 0.2f)
-            {
-                return;
-            }
-            last_update = Time.time;
-            Vessel vessel = FlightGlobals.ActiveVessel;
-			if (vessel == null) {
-				foreach (Device dev in devices) {
-					dev.ClearLCD("Waiting for Flight...");
+			foreach (var dev in _devices)
+			{
+				dev.ButtonUp += ButtonUp;
+				dev.ButtonDown += ButtonDown;
+				dev.ButtonLeft += ButtonLeft;
+				dev.ButtonRight += ButtonRight;
+				dev.ButtonOk += ButtonOk;
+				dev.ButtonCancel += ButtonCancel;
+				dev.ButtonMenu += ButtonMenu;
+
+				dev.DisplayFrame();
+			}
+		}
+
+		/// <summary>
+		///     This method gets called each frame to update the LCD display.
+		/// </summary>
+		public void Update()
+		{
+#if !DEBUG
+			var updateDelta = Time.time - _lastUpdate;
+
+			if (updateDelta < 0.2f)
+			{
+				return;
+			}
+			_lastUpdate = Time.time;
+
+			var vessel = FlightGlobals.ActiveVessel;
+			if (vessel == null)
+			{
+				foreach (var dev in _devices)
+				{
+					dev.ClearLcd("Waiting for Flight...");
 					dev.DisplayFrame();
 				}
 				return;
 			}
 #endif
-            foreach (Device dev in devices)
-            {
-                dev.ClearLCD("");  
-                dev.DoButtons();
-                
-                foreach (DisplayModule dmod in dev.modules)
-                {
-#if !TEST
-                    // FIXME This needs a rewrite.  All this crap should be done in the display classes.
-                    ITargetable target;
-                    target = FlightGlobals.fetch.VesselTarget;
-                    Orbit orbit = null;
-                    String name = "Unknown";
-                    if (dmod.is_target_type_module){
-                        if(target == null){
-                            dmod.ModuleMsg("No Target", new Rectangle(0,0,0,0));
-                        }else{
-                            orbit = target.GetOrbit();
-                            name = target.GetName();
-                        }
-                    }else{
-                        orbit = vessel.orbit;
-                        name = vessel.GetName();
-                    }
+			foreach (var dev in _devices)
+			{
+				dev.ClearLcd("");
+				dev.DoButtons();
+
+				foreach (var dmod in dev.Modules)
+				{
+#if !DEBUG
+	// TODO: This needs a rewrite.  All this crap should be done in the display classes.
+					var target = FlightGlobals.fetch.VesselTarget;
+					Orbit orbit = null;
+					var objName = "Unknown";
+
+					if (dmod.IsTargetTypeModule)
+					{
+						if (target == null)
+						{
+							dmod.ModuleMsg("No Target", new Rectangle(0, 0, 0, 0));
+						}
+						else
+						{
+							orbit = target.GetOrbit();
+							objName = target.GetName();
+						}
+					}
+					else
+					{
+						orbit = vessel.orbit;
+						objName = vessel.GetName();
+					}
+
 					if (orbit != null)
 					{
-						dmod.SetOrbit(orbit, name);
-						dmod.Render(new Rectangle(0, 0, 0, 0));
+						dmod.SetOrbit(orbit, objName);
 					}
 #endif
-                    if (test_mode)
-                    {
-                        dmod.TestRender(new Rectangle(0, 0, 0, 0));
-                    }
-                }
-                dev.DisplayFrame();
-            }
-            
-                    
-#if !TEST
-            last_update = Time.time;
-#endif   
-        }
+					dmod.Render(new Rectangle(0, 0, 0, 0));
+				}
 
-    }
+				dev.DisplayFrame();
+			}
 
-
-
-
-    // This class contains a few utility functions for getting display units.   Borrwed form Mechjeb
-    public class Util
-    {
-        //From http://svn.xMuMech.com/KSP/trunk/xMuMechLib/MuUtils.cs
-        public static string xMuMech_ToSI(double d, ref String suffix)
-        {
-            int digits = 2;
-            double exponent = Math.Log10(Math.Abs(d));
-            if (Math.Abs(d) >= 1)
-            {
-                switch ((int)Math.Floor(exponent))
-                {
-                    case 0:
-                    case 1:
-                    case 2:
-                        suffix = "";
-                        return d.ToString("F" + digits);
-                    case 3:
-                    case 4:
-                    case 5:
-                        suffix = "k";
-                        return (d / 1e3).ToString("F" + digits);
-                    case 6:
-                    case 7:
-                    case 8:
-                        suffix = "M";
-                        return (d / 1e6).ToString("F" + digits);
-                    case 9:
-                    case 10:
-                    case 11:
-                        suffix = "G";
-                        return (d / 1e9).ToString("F" + digits);
-                    case 12:
-                    case 13:
-                    case 14:
-                        suffix = "T";
-                        return (d / 1e12).ToString("F" + digits);
-                    case 15:
-                    case 16:
-                    case 17:
-                        suffix = "P";
-                        return (d / 1e15).ToString("F" + digits);
-                    case 18:
-                    case 19:
-                    case 20:
-                        suffix = "E";
-                        return (d / 1e18).ToString("F" + digits);
-                    case 21:
-                    case 22:
-                    case 23:
-                        suffix = "Z";
-                        return (d / 1e21).ToString("F" + digits);
-                    default:
-                        suffix = "Y";
-                        return (d / 1e24).ToString("F" + digits);
-                }
-            }
-            else if (Math.Abs(d) > 0)
-            {
-                switch ((int)Math.Floor(exponent))
-                {
-                    case -1:
-                    case -2:
-                    case -3:
-                        suffix = "m";
-                        return (d * 1e3).ToString("F" + digits);
-                    case -4:
-                    case -5:
-                    case -6:
-                        suffix = "μ";
-                        return (d * 1e6).ToString("F" + digits);
-                    case -7:
-                    case -8:
-                    case -9:
-                        suffix = "n";
-                        return (d * 1e9).ToString("F" + digits);
-                    case -10:
-                    case -11:
-                    case -12:
-                        suffix = "p";
-                        return (d * 1e12).ToString("F" + digits);
-                    case -13:
-                    case -14:
-                    case -15:
-                        suffix = "f";
-                        return (d * 1e15).ToString("F" + digits);
-                    case -16:
-                    case -17:
-                    case -18:
-                        suffix = "a";
-                        return (d * 1e18).ToString("F" + digits);
-                    case -19:
-                    case -20:
-                    case -21:
-                        suffix = "z";
-                        return (d * 1e21).ToString("F" + digits);
-                    default:
-                        suffix = "y";
-                        return (d * 1e24).ToString("F" + digits);
-                }
-            }
-            else
-            {
-                suffix = "";
-                return "0";
-            }
-        }
-
-
-
-        public static string ConvertInterval(double seconds, bool do_years)
-        {
-            //string format_1 = "{0:D1}y {1:D1}d {2:D2}h {3:D2}m {4:D2}.{5:D1}s";
-            //string format_2 = "{0:D1}d {1:D2}h {2:D2}m {3:D2}.{4:D1}s";
-            //string format_3 = "{0:D2}h {1:D2}m {2:D2}.{3:D1}s";
-
-            string format_1 = "{0:D1}y {1:D1}d {2:D2}:{3:D2}:{4:D2}";
-            string format_2 = "{0:D1}d {1:D2}:{2:D2}:{3:D2}";
-            string format_3 = "{0:D2}:{1:D2}:{2:D2}";
-
-            TimeSpan interval = TimeSpan.FromSeconds(seconds);
-            int years = interval.Days / 365;
-
-            string output;
-            if (years > 0 && do_years)
-            {
-                output = string.Format(format_1,
-                    years,
-                    interval.Days - (years * 365), //  subtract years * 365 for accurate day count
-                    interval.Hours,
-                    interval.Minutes,
-                    interval.Seconds);
-                //interval.Milliseconds.ToString().Substring(0, 1));
-            }
-            else if (interval.Days > 0)
-            {
-                output = string.Format(format_2,
-                    interval.Days,
-                    interval.Hours,
-                    interval.Minutes,
-                    interval.Seconds);
-                //interval.Milliseconds.ToString().Substring(0, 1));
-            }
-            else
-            {
-                output = string.Format(format_3,
-                    interval.Hours,
-                    interval.Minutes,
-                    interval.Seconds);
-                //interval.Milliseconds.ToString().Substring(0, 1));
-            }
-            return output;
-        }
-    }
-
-    
+#if !DEBUG
+			_lastUpdate = Time.time;
+#endif
+		}
+		#endregion
+	}
 }
-
-

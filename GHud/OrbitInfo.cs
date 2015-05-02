@@ -1,213 +1,215 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Drawing;
 
 namespace GHud
 {
-    class OrbitInfo : DisplayModule
-    {
-        protected String orb_velocity_str;
-        protected String orb_ap_str;
-        protected String orb_pe_str;
-        protected String orb_apt_str;
-        protected String orb_pet_str;
-        protected String orb_ap_suffix;
-        protected String orb_pe_suffix;
-        protected String orb_inc_str;
-        protected String orb_body_name;
-       
-        protected String monicer = "✈";
-        protected int count = 0;
-        
-        protected String situationstr = "";
+	internal class OrbitInfo : DisplayModule
+	{
+		#region Constructors
+		public OrbitInfo(Device dev, string argmon, Color brectC1, Color brectC2)
+			: base(dev)
+		{
+			_name = "Orbit";
+			_selectable = false;
+			_isActive = false;
+			_monicer = argmon;
 
-        public OrbitInfo(Device dev, String argmon, 
-                         System.Drawing.Color brect_c1, 
-                         System.Drawing.Color brect_c2) : base(dev)
-        {
-            name = "Orbit";
-            selectable = false;
-            active = false;
-            monicer = argmon;
+			_width = dev.Width;
+			_height = dev.Height;
 
-            width = dev.width;
-            height = dev.height;
+			_backRectC1 = brectC1;
+			_backRectC2 = brectC2;
 
-            if(brect_c1 != null)
-                back_rect_c1 = brect_c1;
-            if (brect_c2 != null)
-                back_rect_c2 = brect_c2;
+			ResetBackRectBrush();
+		}
+		#endregion
 
-            ResetBackRectBrush();
-        }
-        
-        // Setup some test data for when running in non-ksp test mode
-        protected void PrepTestData(String targname = "")
-        {
+		#region Fields
+		private readonly string _monicer;
+		private string _situationStr;
+		private string _orbitVelocityStr;
+		private string _orbitApoapsisStr;
+		private string _orbitPeriapsisStr;
+		private string _orbitApoapsisTimeStr;
+		private string _orbitPeriapsisTimeStr;
+		private string _orbApSuffix;
+		private string _orbPeSuffix;
+		private string _orbitInclinationStr;
+		private string _orbBodyName;
+		protected int _count;
+		#endregion
 
-            orb_velocity_str = "174.55m/s";
+		#region Methods
+		private void PrepData()
+		{
+#if DEBUG
+			_orbitVelocityStr = "174.55m/s";
+			_orbitApoapsisStr = "70.48m";
+			_orbitPeriapsisStr = "-598.44km";
+			_orbitInclinationStr = "0.103°";
+			_orbitApoapsisTimeStr = "4d 00:00:00";
+			_orbitPeriapsisTimeStr = "00:00:00";
+			_orbBodyName = "Kerbin";
+			_orbitObjectName = "Kerbal X";
+			_situationStr = "Sub Orbital";
+#else
+			var vessel = FlightGlobals.ActiveVessel;
+			switch (vessel.situation)
+			{
+				case Vessel.Situations.DOCKED:
+					_situationStr = "Docked";
+					break;
+				case Vessel.Situations.ESCAPING:
+					_situationStr = "Escaping";
+					break;
+				case Vessel.Situations.FLYING:
+					_situationStr = "Flying";
+					break;
+				case Vessel.Situations.LANDED:
+					_situationStr = "Landed";
+					break;
+				case Vessel.Situations.ORBITING:
+					_situationStr = "";
+					break;
+				case Vessel.Situations.PRELAUNCH:
+					_situationStr = "Prelaunch";
+					break;
+				case Vessel.Situations.SPLASHED:
+					_situationStr = "Splashed";
+					break;
+				case Vessel.Situations.SUB_ORBITAL:
+					_situationStr = "Sub Orbital";
+					break;
+				default:
+					_situationStr = "";
+					break;
+			}
 
-            orb_ap_str = "70.48m";
+			_orbitVelocityStr = _orbit.vel.magnitude.ToString("F2");
+			_orbitApoapsisStr = Util.xMuMech_ToSI(_orbit.ApA, ref _orbApSuffix);
+			_orbitApoapsisStr += _orbApSuffix + "m";
+			_orbitPeriapsisStr = Util.xMuMech_ToSI(_orbit.PeA, ref _orbPeSuffix);
+			_orbitPeriapsisStr += _orbPeSuffix + "m";
+			_orbitInclinationStr = _orbit.inclination.ToString("F3") + "°";
+			_orbitApoapsisTimeStr = Util.ConvertInterval(_orbit.timeToAp, false);
+			_orbitPeriapsisTimeStr = Util.ConvertInterval(_orbit.timeToPe, false);
+			_orbBodyName = _orbit.referenceBody.GetName();
+#endif
+		}
 
-            orb_pe_str = "-598.44km";
+		private void DoRender(Rectangle rect)
+		{
+			CalculateRenderDimensions(rect);
 
-            orb_inc_str = "0.103°";
+			_fontPt = Math.Min(Math.Max((float)((_height / 4f) * 0.7), 7), 14);
 
-            orb_apt_str = "4d 00:00:00";
-            orb_pet_str = "00:00:00";
+			RenderVesselName(0);
+			RenderOrbitBodyName(0);
 
-            orb_body_name = "Kerbin";
-            if (targname == "")
-                targname = "Jool Triprobe";
-            orb_obj_name = targname;
+			RenderVesselOrbitVelocity(1);
+			RenderVesselOrbitInclination(1);
 
-            situationstr = "Sub Orbital";
-        }
+			RenderVesselOrbitApoapsis(2);
+			RenderVesselOrbitPeriapsis(2);
 
+			//∆v
 
-        protected void PrepData(String targname = "")
-        {
-            Vessel vessel = FlightGlobals.ActiveVessel;
+			RenderVesselOrbitApoapsisTime(3);
+			RenderVesselOrbitPeriapsisTime(3);
 
-            switch (vessel.situation)
-            {
-                case Vessel.Situations.DOCKED:
-                    situationstr = "Docked";
-                    break;
-                case Vessel.Situations.ESCAPING:
-                    situationstr = "Escaping";
-                    break;
-                case Vessel.Situations.FLYING:
-                    situationstr = "Flying";
-                    break;
-                case Vessel.Situations.LANDED:
-                    situationstr = "Landed";
-                    break;
-                case Vessel.Situations.ORBITING:
-                    situationstr = "";
-                    break;
-                case Vessel.Situations.PRELAUNCH:
-                    situationstr = "Prelaunch";
-                    break;
-                case Vessel.Situations.SPLASHED:
-                    situationstr = "Splashed";
-                    break;
-                case Vessel.Situations.SUB_ORBITAL:
-                    situationstr = "Sub Orbital";
-                    break;
-                default:
-                    situationstr = "";
-                break;  
-            }
-            
+			RenderSituationString(4);
 
-            orb_velocity_str = orbit.vel.magnitude.ToString("F2");
+			RenderBorderLines(1, 4);
+		}
 
-            orb_ap_str = Util.xMuMech_ToSI(orbit.ApA, ref orb_ap_suffix);
-            orb_ap_str += orb_ap_suffix + "m";
+		private void RenderVesselName(int line)
+		{
+			RenderString(_monicer, line, 0, ref _twoColumnLabeledOffsets, _fmtLeft, FontStyle.Bold, true);
+			RenderString(_orbitObjectName, line, 1, ref _twoColumnLabeledOffsets, _fmtRight, FontStyle.Regular, true);
+		}
 
-            orb_pe_str = Util.xMuMech_ToSI(orbit.PeA, ref orb_pe_suffix);
-            orb_pe_str += orb_pe_suffix + "m";
+		private void RenderOrbitBodyName(int line)
+		{
+			const string orbitBodyMonicer = "⊙";
+			RenderString(orbitBodyMonicer, line, 2, ref _twoColumnLabeledOffsets, _fmtLeft, FontStyle.Bold, true);
+			RenderString(_orbBodyName, line, 3, ref _twoColumnLabeledOffsets, _fmtRight, FontStyle.Regular, true);
+		}
 
-            orb_inc_str = orbit.inclination.ToString("F3") + "°";
+		private void RenderVesselOrbitVelocity(int line)
+		{
+			const string orbitVelocityMonicer = "⇢";
+			RenderString(orbitVelocityMonicer, line, 0, ref _twoColumnLabeledOffsets, _fmtLeft);
+			RenderString(_orbitVelocityStr, line, 1, ref _twoColumnLabeledOffsets, _fmtRight);
+		}
 
-            orb_apt_str = Util.ConvertInterval(orbit.timeToAp, false);
-            orb_pet_str = Util.ConvertInterval(orbit.timeToPe, false);
+		private void RenderVesselOrbitInclination(int line)
+		{
+			const string orbitInclinationMonicer = "θ";
+			RenderString(orbitInclinationMonicer, line, 2, ref _twoColumnLabeledOffsets, _fmtLeft);
+			RenderString(_orbitInclinationStr, line, 3, ref _twoColumnLabeledOffsets, _fmtRight);
+		}
 
-            orb_body_name = orbit.referenceBody.GetName();
-            //orb_obj_name = vessel.name;
-        }
+		private void RenderVesselOrbitApoapsis(int line)
+		{
+			const string orbitApoapsisMonicer = "a";
+			RenderString(orbitApoapsisMonicer, line, 0, ref _twoColumnOffsets, _fmtLeft);
+			RenderString(_orbitApoapsisStr, line, 0, ref _twoColumnOffsets, _fmtRight);
+		}
 
-        protected void DoRender(Rectangle rect)
-        {
-            int curline = 0;
-            float tmp_font_pt = font_pt;
+		private void RenderVesselOrbitPeriapsis(int line)
+		{
+			const string orbitPeriapsisMonicer = "p";
+			RenderString(orbitPeriapsisMonicer, line, 1, ref _twoColumnOffsets, _fmtLeft);
+			RenderString(_orbitPeriapsisStr, line, 1, ref _twoColumnOffsets, _fmtRight);
+		}
 
-            if (rect.Width != 0 && rect.Height != 0)
-            {
-                width = rect.Width;
-                height = rect.Height;
-                xoff = rect.X;
-                yoff = rect.Y;
-            }
-            else
-            {
-                width = dev.width;
-                height = dev.height;
-                xoff = 0;
-                yoff = 0;
-            }
-            font_pt = Math.Min(Math.Max((float)((height / 4) * 0.7), 7), 14);
-            curline = 0;
-            RenderString(monicer, curline, 0, ref two_column_labeled_offsets, fmt_center, System.Drawing.FontStyle.Bold, true);
-            RenderString(orb_obj_name, curline, 1, ref two_column_labeled_offsets, fmt_left, System.Drawing.FontStyle.Regular, true);
-            RenderString("⊙ " + orb_body_name, curline, 3, ref two_column_labeled_offsets, fmt_center, System.Drawing.FontStyle.Regular, true);
-            //∆v
-         
-            curline = 1;
-            RenderString("⇢", curline, 0, ref two_column_labeled_offsets, fmt_right, System.Drawing.FontStyle.Regular, false, tmp_font_pt + 3.0f, 0.0f, -3.0f);
-            RenderString(orb_velocity_str, curline, 1, ref two_column_labeled_offsets, fmt_center);
-            
-            RenderString("θ", curline, 2, ref two_column_labeled_offsets, fmt_right);
-            RenderString(orb_inc_str, curline, 3, ref two_column_labeled_offsets, fmt_center);
-            
-            curline = 2;
-            RenderString("a", curline, 0, ref two_column_offsets, fmt_left);
-            RenderString("p", curline, 1, ref two_column_offsets, fmt_left);
+		private void RenderBorderLines(int topLine, int bottomLine)
+		{
+			_dev.Graphics.DrawLine(_dev.IsColor ? Pens.Green : Pens.Black, 0 + _xOff, topLine * _lineOffset + _yOff, _width + _xOff,
+				topLine * _lineOffset + _yOff);
+			_dev.Graphics.DrawLine(_dev.IsColor ? Pens.Green : Pens.Black, (_width / 2) + _xOff, (topLine * _lineOffset) + _yOff,
+				(_width / 2) + _xOff, _height + _yOff);
 
-            RenderString(orb_ap_str, curline, 0, ref two_column_offsets, fmt_right);
-            RenderString(orb_pe_str, curline, 1, ref two_column_offsets, fmt_right);
-            dev.graph.DrawLine(dev.is_color ? Pens.Green : Pens.Black, 0 + xoff, curline * line_offset + yoff, width + xoff, curline * line_offset + yoff);
-            dev.graph.DrawLine(dev.is_color ? Pens.Green : Pens.Black, (width / 2) + xoff, (curline * line_offset) + yoff, (width / 2) + xoff, height + yoff);
+			_dev.Graphics.DrawLine(_dev.IsColor ? Pens.Green : Pens.Black, 0 + _xOff, bottomLine * _lineOffset + _yOff,
+				_width + _xOff, bottomLine * _lineOffset + _yOff);
+		}
 
-            curline = 3;
-            RenderString(orb_apt_str, curline, 0, ref two_column_offsets, fmt_right);
-            RenderString(orb_pet_str, curline, 1, ref two_column_offsets, fmt_right);
+		private void RenderVesselOrbitApoapsisTime(int line)
+		{
+			RenderString(_orbitApoapsisTimeStr, line, 0, ref _twoColumnOffsets, _fmtRight);
+		}
 
-            curline = 4;
-            if(dev.is_color)
-                RenderString(situationstr, curline, 0, ref two_column_offsets, fmt_left, System.Drawing.FontStyle.Regular, false, tmp_font_pt - 2.0f, 0.0f, 10.0f);
+		private void RenderVesselOrbitPeriapsisTime(int line)
+		{
+			RenderString(_orbitPeriapsisTimeStr, line, 1, ref _twoColumnOffsets, _fmtRight);
+		}
 
-        }
+		private void RenderSituationString(int line)
+		{
+			if (_dev.IsColor)
+			{
+				RenderString(_situationStr, line, 0, ref _twoColumnOffsets, _fmtLeft);
+			}
+		}
 
-        public override void TestRender(Rectangle rect)
-        {
-            if (!active)
-                return;
-            /*
-            if (orbit == null)
-            {
-                if (is_target_type_module)
-                    ModuleMsg("No Target", rect);
-                else
-                    ModuleMsg("Null Orbit", rect);
-                return;
-            }
-            */
-            PrepTestData();
+		public override void Render(Rectangle rect)
+		{
+			if (!IsActive)
+			{
+				return;
+			}
 
-            DoRender(rect);
-        }
+#if !DEBUG
+			if (_orbit == null)
+			{
+				ModuleMsg(IsTargetTypeModule ? "No Target" : "Null Orbit", rect);
+				return;
+			}
+#endif
 
-
-
-        public override void Render(Rectangle rect)
-        {
-            if (!active)
-                return;
-
-            if (orbit == null)
-            {
-                if (is_target_type_module)
-                    ModuleMsg("No Target", rect);
-                else
-                    ModuleMsg("Null Orbit", rect);
-                return;
-            }
-
-            PrepData();
-            DoRender(rect);
-        }
-    }
+			PrepData();
+			DoRender(rect);
+		}
+		#endregion
+	}
 }

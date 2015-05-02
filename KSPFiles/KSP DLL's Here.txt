@@ -1,1 +1,3 @@
 Copy the files Assembly-CSharp.dll and UnityEngine.dll located in {KSP_Root}\KSP_Data\Managed\ into this folder
+
+Requires the files from KSP version 1.0

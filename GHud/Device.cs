@@ -1,266 +1,332 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Drawing;
+using System.Drawing.Text;
+using System.Linq;
 
 namespace GHud
 {
+	// Device base class
+	public abstract class Device : IDisposable
+	{
+		#region Delegates
+		public delegate void ButtonHandler(object sender, EventArgs e);
+		#endregion
 
-    // Device base class
-    public class Device: IDisposable
-    {
-        public bool valid;
-        
-        // Device physical parameters
-        public int width;
-        public int height;
-        public bool is_color;
+		#region Constructors
+		protected Device()
+		{
+			_valid = false;
+			_width = 0;
+			_height = 0;
+			_isColor = false;
+			_fontPt = 0.0F;
+			_renderHint = TextRenderingHint.SingleBitPerPixelGridFit;
+			_clearColor = Color.White;
+			_clearBrush = Brushes.White;
+			_invertedClearBrush = Brushes.Black;
+			_defaultTxtBrush = Brushes.Black;
+			_invertedTxtBrush = Brushes.White;
+			_defaultPen = Pens.Black;
+			_useBackdrops = false;
+		}
+		#endregion
 
-        // Backdrops are an alpha blended background
-        public bool use_backdrops;
-        
-        // Rendering parameters
-        public float font_pt;
-        public System.Drawing.Text.TextRenderingHint render_hint;
-        public System.Drawing.Color clear_color;
-        public Brush clear_brush;
-        public Brush inverted_clear_brush;
-        public Brush default_txt_brush;
-        public Brush inverted_txt_brush;
-        public Pen default_pen;
+		#region Fields
+		protected bool _valid;
+		// Device physical parameters
+		protected int _width;
+		protected int _height;
+		protected bool _isColor;
+		protected bool _useBackdrops;
+		// Rendering parameters
+		protected float _fontPt;
+		protected TextRenderingHint _renderHint;
+		protected Color _clearColor;
+		protected Brush _clearBrush;
+		protected Brush _invertedClearBrush;
+		protected Brush _defaultTxtBrush;
+		protected Brush _invertedTxtBrush;
+		protected Pen _defaultPen;
+		// Device LCD connection info
+		private int _connection = NativeMethods.LGLCD_INVALID_CONNECTION;
+		private int _device = NativeMethods.LGLCD_INVALID_DEVICE;
+		protected int _deviceType = NativeMethods.LGLCD_INVALID_DEVICE;
+		private uint _lastButtons;
+		protected int _curFont = 1;
+		protected int _numFonts = 7;
+		private Bitmap _lcd; // Main rendering surface
+		protected Graphics _graphics;
+		private Font _sysFont;
+		private readonly List<DisplayModule> _modules = new List<DisplayModule>();
+		private bool _disposed;
 
-        // Device LCD connection info
-        protected int connection = DMcLgLCD.LGLCD_INVALID_CONNECTION;
-        public int device = DMcLgLCD.LGLCD_INVALID_DEVICE;
-        protected int device_type = DMcLgLCD.LGLCD_INVALID_DEVICE;
+		protected string[] _fontNames =
+		{
+			"Inconsolata Medium", "Arial", "Arial Narrow", "Consolas", "Terminal", "Segoe UI Light", "Segoe UI"
+		};
+		#endregion
 
-        protected uint last_buttons = 0;
- 
-        public String[] font_names = new String[]  {"Inconsolata Medium", "Arial", "Arial Narrow", "Consolas", "Terminal", "Segoe UI Light", "Segoe UI"};
-        public int cur_font = 1;
-        protected int num_fonts = 7;
+		#region Properties
+		public int Width
+		{
+			get { return _width; }
+			set { _width = value; }
+		}
 
-        public delegate void ButtonHandler(Device dev);
-       
-        public event ButtonHandler ButtonUP;
-        public event ButtonHandler ButtonDOWN;
-        public event ButtonHandler ButtonLEFT;
-        public event ButtonHandler ButtonRIGHT;
-        public event ButtonHandler ButtonOK;
-        public event ButtonHandler ButtonCANCEL;
-        public event ButtonHandler ButtonMENU;
+		public int Height
+		{
+			get { return _height; }
+			set { _height = value; }
+		}
 
-        public Bitmap LCD;  // Main rendering surface
-        public System.Drawing.Graphics graph;
-        public System.Drawing.Font sys_font;
+		public int CurrentFontIndex
+		{
+			get { return _curFont; }
+		}
 
-        public List<DisplayModule> modules = new List<DisplayModule>();
+		public string[] FontNames
+		{
+			get { return _fontNames.ToArray(); }
+		}
 
-        private bool disposed = false;
+		public float FontSize
+		{
+			get { return _fontPt; }
+		}
 
-        public Device()
-        {
-            valid = false;
-            width = 0;
-            height = 0;
-            is_color = false;
-            font_pt = 0.0F;
-            render_hint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
-            clear_color = System.Drawing.Color.White;
-            clear_brush = Brushes.White;
-            inverted_clear_brush = Brushes.Black;
-            default_txt_brush = Brushes.Black;
-            inverted_txt_brush = Brushes.White;
-            default_pen = Pens.Black;
-            use_backdrops = false;
-        }
+		public bool IsColor
+		{
+			get { return _isColor; }
+			set { _isColor = value; }
+		}
 
-        public bool isValid()
-        {
-            return !(device == DMcLgLCD.LGLCD_INVALID_DEVICE);
-        }
+		public Graphics Graphics
+		{
+			get { return _graphics; }
+		}
 
-        public void Dispose()
-        {
-            if (disposed)
-                return;
-            disposed = true;
+		public List<DisplayModule> Modules
+		{
+			get { return _modules; }
+		}
 
-            if (sys_font != null)
-                sys_font.Dispose();
+		public Brush ClearBrush
+		{
+			get { return _clearBrush; }
+		}
 
-            LCD.Dispose();
+		public Brush InvertedClearBrush
+		{
+			get { return _invertedClearBrush; }
+		}
 
-            if (device != DMcLgLCD.LGLCD_INVALID_DEVICE)
-            {
-                DMcLgLCD.LcdClose(device);
-                device = DMcLgLCD.LGLCD_INVALID_DEVICE;
-            }
+		public Brush DefaultTxtBrush
+		{
+			get { return _defaultTxtBrush; }
+		}
 
-            if (connection != DMcLgLCD.LGLCD_INVALID_CONNECTION)
-            {
-                DMcLgLCD.LcdDisconnect(connection);
-                connection = DMcLgLCD.LGLCD_INVALID_CONNECTION;
-            }
-            GC.SuppressFinalize(this);
-        }
+		public Brush InvertedTxtBrush
+		{
+			get { return _invertedTxtBrush; }
+		}
 
-        public void RenderSysString(String msg, bool invert, Rectangle rect)
-        {
-            if (rect.Width == 0 && rect.Height == 0)
-            {
-                rect.Width = width;
-                rect.Height = height;
-            }
+		// Backdrops are an alpha blended background
+		public bool UseBackdrops
+		{
+			get { return _useBackdrops; }
+			set { _useBackdrops = value; }
+		}
+		#endregion Properties
 
-            if(sys_font == null)
-                sys_font = new System.Drawing.Font(font_names[cur_font], font_pt, System.Drawing.FontStyle.Bold);
-            SizeF str_bounds = graph.MeasureString(msg, sys_font, new Point(0, 0), System.Drawing.StringFormat.GenericDefault);
-            Brush br = invert ? inverted_txt_brush : default_txt_brush;
+		#region Events
+		public event ButtonHandler ButtonUp;
+		public event ButtonHandler ButtonDown;
+		public event ButtonHandler ButtonLeft;
+		public event ButtonHandler ButtonRight;
+		public event ButtonHandler ButtonOk;
+		public event ButtonHandler ButtonCancel;
+		public event ButtonHandler ButtonMenu;
+		#endregion
 
-            int x = (int)((rect.Width / 2) - (str_bounds.Width / 2) + rect.X);
-            int y = (int)((rect.Height / 2) - (str_bounds.Height / 2) + rect.Y);
+		#region Methods
+		public bool IsValid()
+		{
+			return _device != NativeMethods.LGLCD_INVALID_DEVICE;
+		}
 
-            if (invert)
-            {
-                Rectangle invert_rect = new Rectangle(x, y, (int)(str_bounds.Width + 4), (int)(str_bounds.Height + 4));
-                graph.FillRectangle(inverted_clear_brush, invert_rect);
-            }
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+			_disposed = true;
 
-            graph.DrawString(msg, sys_font, invert ? inverted_txt_brush : default_txt_brush, x, y);
-        }
+			if (_sysFont != null)
+			{
+				_sysFont.Dispose();
+			}
 
-        // Poorly named.  This simply clears the bitmap that will eventually be written to the LCD
-        public void ClearLCD(String msg)
-        {
-            if (graph == null)
-                return;
-            
-            graph.Clear(clear_color);
-            
-            if (msg != null && msg != "")
-            {
-                RenderSysString(msg, false, new Rectangle(0,0,0,0));
-            }
-        }
+			_lcd.Dispose();
 
-        public void DisplayFrame()
-        {
-            if (!valid)
-                return;
-            DMcLgLCD.LcdUpdateBitmap(device, LCD.GetHbitmap(), device_type);
-        }
+			if (_device != NativeMethods.LGLCD_INVALID_DEVICE)
+			{
+				NativeMethods.LcdClose(_device);
+				_device = NativeMethods.LGLCD_INVALID_DEVICE;
+			}
 
-        public Rectangle GetRect()
-        {
-            return new Rectangle(0, 0, width, height);
-        }
+			if (_connection != NativeMethods.LGLCD_INVALID_CONNECTION)
+			{
+				NativeMethods.LcdDisconnect(_connection);
+				_connection = NativeMethods.LGLCD_INVALID_CONNECTION;
+			}
+			GC.SuppressFinalize(this);
+		}
 
-        protected void InitLCD()
-        {
-            connection = DMcLgLCD.LcdConnectEx("GHud", 0, 0);
-            if (DMcLgLCD.LGLCD_INVALID_CONNECTION != connection)
-            {
-                device = DMcLgLCD.LcdOpenByType(connection, device_type);
-                if(DMcLgLCD.LGLCD_INVALID_DEVICE == device)
-                    return;
+		public void RenderSysString(string msg, bool invert, Rectangle rect)
+		{
+			if (rect.Width == 0 && rect.Height == 0)
+			{
+				rect.Width = _width;
+				rect.Height = _height;
+			}
 
-                LCD = new Bitmap(width, height);
-                
-                graph = System.Drawing.Graphics.FromImage(LCD);
-                
-                graph.TextRenderingHint = render_hint;
+			if (_sysFont == null)
+			{
+				_sysFont = new Font(_fontNames[_curFont], _fontPt, FontStyle.Bold);
+			}
+			var strBounds = _graphics.MeasureString(msg, _sysFont, new Point(0, 0), StringFormat.GenericDefault);
 
-                ClearLCD("Waiting for Flight...");
-                DMcLgLCD.LcdSetAsLCDForegroundApp(device, DMcLgLCD.LGLCD_FORE_YES);
-                valid = true;
-           }
-        }
+			// ReSharper disable once PossibleLossOfFraction
+			var x = (int)((rect.Width / 2) - (strBounds.Width / 2) + rect.X);
+			// ReSharper disable once PossibleLossOfFraction
+			var y = (int)((rect.Height / 2) - (strBounds.Height / 2) + rect.Y);
 
-        public void DoButtons()
-        {
-            uint buttons = DMcLgLCD.LcdReadSoftButtons(device);
-            
-            if (buttons != last_buttons)
-            {
-                if ((buttons & (DMcLgLCD.LGLCD_BUTTON_1 | DMcLgLCD.LGLCD_BUTTON_LEFT)) != 0)
-                {
-                    ButtonLEFT(this);
-                }
-                if ((buttons & (DMcLgLCD.LGLCD_BUTTON_2 | DMcLgLCD.LGLCD_BUTTON_RIGHT)) != 0)
-                {
-                    ButtonRIGHT(this);
-                }
-                if ((buttons & (DMcLgLCD.LGLCD_BUTTON_3 | DMcLgLCD.LGLCD_BUTTON_OK)) != 0)
-                {
-                    ButtonOK(this);
-                }
-                if ((buttons & (DMcLgLCD.LGLCD_BUTTON_4 | DMcLgLCD.LGLCD_BUTTON_MENU)) != 0)
-                {
-                    ButtonMENU(this);
-                }
-                if ((buttons & DMcLgLCD.LGLCD_BUTTON_UP) != 0)
-                {
-                    ButtonUP(this);
-                }
-                if ((buttons & DMcLgLCD.LGLCD_BUTTON_DOWN) != 0)
-                {
-                    ButtonDOWN(this);
-                }
-                if ((buttons & DMcLgLCD.LGLCD_BUTTON_CANCEL) != 0)
-                {
-                    ButtonCANCEL(this);
-                }
-                         
-                last_buttons = buttons;
-            }
-        }
-    }
+			if (invert)
+			{
+				var invertRect = new Rectangle(x, y, (int)(strBounds.Width + 4), (int)(strBounds.Height + 4));
+				_graphics.FillRectangle(_invertedClearBrush, invertRect);
+			}
 
-    class DeviceBW : Device
-    {
-        public DeviceBW()
-        {
-            valid = false;
-            width = 160;
-            height = 43;
-            is_color = false;
-            font_pt = 7.0F;
-            render_hint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
-            clear_color = System.Drawing.Color.White;
-            default_txt_brush = Brushes.Black;
-            clear_brush = Brushes.White;
-            inverted_clear_brush = Brushes.Black;
-            inverted_txt_brush = Brushes.White;
-            default_pen = Pens.Black;
-            use_backdrops = false;
+			_graphics.DrawString(msg, _sysFont, invert ? _invertedTxtBrush : _defaultTxtBrush, x, y);
+		}
 
-            device_type = DMcLgLCD.LGLCD_DEVICE_BW;
-            InitLCD();
-        }
-    }
+		// Poorly named.  This simply clears the bitmap that will eventually be written to the LCD
+		public void ClearLcd(string msg)
+		{
+			if (_graphics == null)
+			{
+				return;
+			}
 
-    class DeviceQVGA : Device
-    {
-        public DeviceQVGA()
-        {
-            valid = false;
-            width = 320;
-            height = 240;
-            is_color = true;
-            font_pt = 14.0F;
-            render_hint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-            clear_color = System.Drawing.Color.Black;
-            default_txt_brush = Brushes.White;
-            clear_brush = Brushes.Black;
-            inverted_clear_brush = Brushes.White;
-            inverted_txt_brush = Brushes.Black;
-            default_pen = Pens.White;
-            use_backdrops = false;
+			_graphics.Clear(_clearColor);
 
-            device_type = DMcLgLCD.LGLCD_DEVICE_QVGA;
-            InitLCD();
-        }
-    }
+			if (!string.IsNullOrEmpty(msg))
+			{
+				RenderSysString(msg, false, new Rectangle(0, 0, 0, 0));
+			}
+		}
+
+		public void DisplayFrame()
+		{
+			if (!_valid)
+			{
+				return;
+			}
+			var bmp = _lcd.GetHbitmap();
+			NativeMethods.LcdUpdateBitmap(_device, bmp, _deviceType);
+		}
+
+		public Rectangle GetRect()
+		{
+			return new Rectangle(0, 0, _width, _height);
+		}
+
+		protected void InitLcd()
+		{
+			_connection = NativeMethods.LcdConnectEx("GHud", 0, 0);
+			if (NativeMethods.LGLCD_INVALID_CONNECTION == _connection)
+			{
+				return;
+			}
+			_device = NativeMethods.LcdOpenByType(_connection, _deviceType);
+			if (NativeMethods.LGLCD_INVALID_DEVICE == _device)
+			{
+				return;
+			}
+
+			_lcd = new Bitmap(_width, _height);
+
+			_graphics = Graphics.FromImage(_lcd);
+
+			_graphics.TextRenderingHint = _renderHint;
+
+			ClearLcd("Waiting for Flight...");
+			NativeMethods.LcdSetAsLCDForegroundApp(_device, NativeMethods.LGLCD_FORE_YES);
+			_valid = true;
+		}
+
+		public void DoButtons()
+		{
+			var buttons = NativeMethods.LcdReadSoftButtons(_device);
+
+			if (buttons == _lastButtons)
+			{
+				return;
+			}
+			if ((buttons & (NativeMethods.LGLCD_BUTTON_1 | NativeMethods.LGLCD_BUTTON_LEFT)) != 0)
+			{
+				if (ButtonLeft != null)
+				{
+					ButtonLeft(this, EventArgs.Empty);
+				}
+			}
+			if ((buttons & (NativeMethods.LGLCD_BUTTON_2 | NativeMethods.LGLCD_BUTTON_RIGHT)) != 0)
+			{
+				if (ButtonRight != null)
+				{
+					ButtonRight(this, EventArgs.Empty);
+				}
+			}
+			if ((buttons & (NativeMethods.LGLCD_BUTTON_3 | NativeMethods.LGLCD_BUTTON_OK)) != 0)
+			{
+				if (ButtonOk != null)
+				{
+					ButtonOk(this, EventArgs.Empty);
+				}
+			}
+			if ((buttons & (NativeMethods.LGLCD_BUTTON_4 | NativeMethods.LGLCD_BUTTON_MENU)) != 0)
+			{
+				if (ButtonMenu != null)
+				{
+					ButtonMenu(this, EventArgs.Empty);
+				}
+			}
+			if ((buttons & NativeMethods.LGLCD_BUTTON_UP) != 0)
+			{
+				if (ButtonUp != null)
+				{
+					ButtonUp(this, EventArgs.Empty);
+				}
+			}
+			if ((buttons & NativeMethods.LGLCD_BUTTON_DOWN) != 0)
+			{
+				if (ButtonDown != null)
+				{
+					ButtonDown(this, EventArgs.Empty);
+				}
+			}
+			if ((buttons & NativeMethods.LGLCD_BUTTON_CANCEL) != 0)
+			{
+				if (ButtonCancel != null)
+				{
+					ButtonCancel(this, EventArgs.Empty);
+				}
+			}
+
+			_lastButtons = buttons;
+		}
+		#endregion
+	}
 }
-

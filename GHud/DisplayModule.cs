@@ -1,239 +1,296 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 
 namespace GHud
 {
-    public class DisplayModule: IDisposable
-    {
-        public string name;
-        public int width = 1;
-        public int height = 1;
-        public int xoff = 0;
-        public int yoff = 0;
-        public float font_pt;
-        public bool is_target_type_module = false;
+	public abstract class DisplayModule : IDisposable
+	{
+		#region Constructors
+		protected DisplayModule(Device argdev)
+		{
+			_dev = argdev;
+			_name = "INVALID";
+			_selectable = false;
+			_isActive = false;
+			_curfont = null;
 
-        protected bool selectable;
-        public bool active = false;
-        protected System.Drawing.Font curfont;
+			_moduleId = 0;
 
-        protected float line_offset;
-        protected int max_suffix_width = 0;
-        protected int max_lab_width = 0;
-        protected const String mps2_suf = "m²";//"km²";
-        protected const String big_suf = "mT";
-        protected const String big_lab = "WW:";
+			_fontPt = _dev.FontSize;
 
-        protected StringFormat fmt_center = new StringFormat();
-        protected StringFormat fmt_right = new StringFormat();
-        protected StringFormat fmt_left = new StringFormat();
-        protected StringFormat fmt_default = System.Drawing.StringFormat.GenericDefault;
+			_companionMod = null;
 
-        protected int[] two_column_labeled_offsets;
-        protected int[] two_column_offsets;
-        protected Device dev;
+			_fmtLeft.Alignment = StringAlignment.Near;
+			_fmtLeft.LineAlignment = StringAlignment.Center;
+			_fmtCenter.Alignment = StringAlignment.Center;
+			_fmtCenter.LineAlignment = StringAlignment.Center;
+			_fmtRight.Alignment = StringAlignment.Far;
+			_fmtRight.LineAlignment = StringAlignment.Center;
+		}
+		#endregion
 
-        protected System.Drawing.Color back_rect_c1 = System.Drawing.Color.Black;
-        protected System.Drawing.Color back_rect_c2 = System.Drawing.Color.Black;
+		#region Fields
+		protected string _name;
+		protected int _width = 1;
+		protected int _height = 1;
+		protected int _xOff;
+		protected int _yOff;
+		protected float _fontPt;
+		protected bool _selectable;
+		protected bool _isActive;
+		private Font _curfont;
+		protected float _lineOffset;
+		private int _maxSuffixWidth;
+		private int _maxLabWidth;
+		protected const string Mps2Suf = "m²";
+		private const string BigSuf = "mT";
+		private const string BigLab = "WW:";
+		protected StringFormat _fmtCenter = new StringFormat();
+		protected StringFormat _fmtRight = new StringFormat();
+		protected StringFormat _fmtLeft = new StringFormat();
+		private StringFormat _fmtDefault = StringFormat.GenericDefault;
+		protected int[] _twoColumnLabeledOffsets;
+		protected int[] _twoColumnOffsets;
+		protected Device _dev;
+		protected Color _backRectC1 = Color.Black;
+		protected Color _backRectC2 = Color.Black;
+		private LinearGradientBrush _backRectBrush;
+		protected Orbit _orbit;
+		protected string _orbitObjectName;
+		protected int _moduleId;
+		protected DisplayModule _companionMod;
+		private bool _disposed;
+		#endregion
 
-        protected System.Drawing.Drawing2D.LinearGradientBrush back_rect_brush;
+		#region Properties
+		public bool IsTargetTypeModule { get; set; }
 
-        protected Orbit orbit;
-        protected String orb_obj_name;
+		public bool IsActive
+		{
+			get { return _isActive; }
+		}
 
-        
-        public int modid;
-        public DisplayModule companion_mod;
+		public int ModuleId
+		{
+			get { return _moduleId; }
+			set { _moduleId = value; }
+		}
 
-        private bool disposed = false;
+		public DisplayModule CompanionMod
+		{
+			get { return _companionMod; }
+			set { _companionMod = value; }
+		}
+		#endregion
 
-        public void Dispose()
-        {
-            if (disposed)
-                return;
-            disposed = true;
+		#region Methods
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+			_disposed = true;
 
-            if (fmt_center != null)
-            {
-                fmt_center.Dispose();
-                fmt_center = null;
-            }
-            if (fmt_right != null)
-            {
-                fmt_right.Dispose();
-                fmt_right = null;
-            }
-            if (fmt_left != null)
-            {
-                fmt_left.Dispose();
-                fmt_left = null;
-            }
-            if (fmt_default != null)
-            {
-                fmt_default.Dispose();
-                fmt_default = null;
-            }
-            if (back_rect_brush != null)
-            {
-                back_rect_brush.Dispose();
-                back_rect_brush = null;
-            }
-        }
+			if (_fmtCenter != null)
+			{
+				_fmtCenter.Dispose();
+				_fmtCenter = null;
+			}
+			if (_fmtRight != null)
+			{
+				_fmtRight.Dispose();
+				_fmtRight = null;
+			}
+			if (_fmtLeft != null)
+			{
+				_fmtLeft.Dispose();
+				_fmtLeft = null;
+			}
+			if (_fmtDefault != null)
+			{
+				_fmtDefault.Dispose();
+				_fmtDefault = null;
+			}
+			// ReSharper disable once InvertIf
+			if (_backRectBrush != null)
+			{
+				_backRectBrush.Dispose();
+				_backRectBrush = null;
+			}
+		}
 
-        public DisplayModule(Device argdev)
-        {
-            dev = argdev;
-            name = "INVALID";
-            selectable = false;
-            active = false;
-            curfont = null;
+		// ReSharper disable once VirtualMemberNeverOverriden.Global
+		public void SetOrbit(Orbit argorbit, string objName = "Unknown")
+		{
+			_orbit = argorbit;
+			_orbitObjectName = objName;
+		}
 
-            modid = 0;
+		protected void ResetBackRectBrush()
+		{
+			if (_backRectBrush != null)
+			{
+				_backRectBrush.Dispose();
+			}
+			_backRectBrush = new LinearGradientBrush(new PointF(0.5F, 0.0F), new PointF(0.5F, 1.0F), _backRectC1, _backRectC2);
+		}
 
-            font_pt = dev.font_pt;
+		public void ModuleMsg(string msg, Rectangle rect, bool invert = false)
+		{
+			if (!IsActive)
+			{
+				return;
+			}
 
-            companion_mod = null;
+			if (!string.IsNullOrEmpty(msg))
+			{
+				_dev.RenderSysString(msg, invert, rect);
+			}
+		}
 
-            fmt_left.Alignment = StringAlignment.Near;
-            fmt_left.LineAlignment = StringAlignment.Center;
-            fmt_center.Alignment = StringAlignment.Center;
-            fmt_center.LineAlignment = StringAlignment.Center;
-            fmt_right.Alignment = StringAlignment.Far;
-            fmt_right.LineAlignment = StringAlignment.Center;
-        }
+		protected virtual void Clear()
+		{
+			if (!IsActive)
+			{
+				return;
+			}
+			_dev.Graphics.FillRectangle(_dev.ClearBrush, new Rectangle(_xOff, _yOff, _width, _height));
+		}
 
-        public virtual void SetOrbit(Orbit argorbit, String obj_name = "Unknown")
-        {
-            orbit = argorbit;
-            orb_obj_name = obj_name;
-        }
+		public void Activate()
+		{
+			_isActive = true;
+		}
 
-        protected void ResetBackRectBrush()
-        {
-            if(back_rect_brush != null)
-                back_rect_brush.Dispose();
-            back_rect_brush = new System.Drawing.Drawing2D.LinearGradientBrush(new PointF(0.5F,0.0F), new PointF(0.5F, 1.0F), back_rect_c1, back_rect_c2);
-        }
+		public void Deactivate()
+		{
+			_isActive = false;
+		}
 
-        public virtual void ModuleMsg(String msg, Rectangle rect, bool invert = false)
-        {
-            if (!active)
-                return;
-            
-            if (msg != null && msg != "" && rect != null)
-            {
-                dev.RenderSysString(msg, invert, rect);
-            }
-        }
+		public virtual void Render(Rectangle rect)
+		{
+		}
 
+		public void DisplayModuleName()
+		{
+			_dev.RenderSysString(_name, true, new Rectangle(0, 0, 0, 0));
+		}
 
-        public virtual void Clear()
-        {
-            if (!active)
-                return;
-            dev.graph.FillRectangle(dev.clear_brush, new Rectangle(xoff, yoff, width, height));
-        }
+		// Calculates a set of column offset info based on measurements of the font and the display geometry
+		private void CalcColumns(Font font)
+		{
+			if (!IsActive || font == null)
+			{
+				return;
+			}
 
-        public virtual void Activate()
-        {
-            active = true;
-        }
+			var maxSufBounds = _dev.Graphics.MeasureString(BigSuf, font, new Point(0, 0), _fmtDefault);
+			_maxSuffixWidth = (int)(maxSufBounds.Width + 1);
 
-        public virtual void Deactivate()
-        {
-            active = false;
-        }
+			var maxLabBounds = _dev.Graphics.MeasureString(BigLab, font, new Point(0, 0), _fmtDefault);
+			_maxLabWidth = (int)(maxLabBounds.Width);
 
-        public virtual void TestRender(Rectangle rect)
-        {
+			var smallCol = _maxLabWidth;
+			var largeCol = (_width - (smallCol * 2)) / 2;
 
-        }
+			_lineOffset = (float)Math.Round(font.GetHeight());
 
-        public virtual void Render(Rectangle rect)
-        {
-            
-        }
+			if (_twoColumnLabeledOffsets == null)
+			{
+				_twoColumnLabeledOffsets = new int[5];
+			}
+			_twoColumnLabeledOffsets[0] = _xOff + 0;
+			_twoColumnLabeledOffsets[1] = _xOff + smallCol;
+			_twoColumnLabeledOffsets[2] = _twoColumnLabeledOffsets[1] + largeCol;
+			_twoColumnLabeledOffsets[3] = _twoColumnLabeledOffsets[2] + smallCol;
+			_twoColumnLabeledOffsets[4] = _xOff + _width;
 
-        public virtual void DisplayModuleName()
-        {
-            dev.RenderSysString(name, true, new Rectangle(0,0,0,0));
-        }
+			if (_twoColumnOffsets == null)
+			{
+				_twoColumnOffsets = new int[3];
+			}
+			_twoColumnOffsets[0] = _xOff + 0;
+			_twoColumnOffsets[1] = _xOff + _width / 2;
+			_twoColumnOffsets[2] = _xOff + _width;
+		}
 
-        // Calculates a set of column offset info based on measurements of the font and the display geometry
-        protected void CalcColumns(System.Drawing.Font font)
-        {
-            if (!active || font == null)
-                return;
+		private void FillRectGradient(Rectangle rect, float pct1, Color c1, Color c2, float pct2, Color c3, Color c4)
+		{
+			var rect1 = new Rectangle(rect.X, rect.Y, rect.Width, (int)Math.Ceiling(rect.Height * pct1));
+			var rect2 = new Rectangle(rect.X, rect.Y + rect1.Height - 1, rect.Width, (int)Math.Ceiling(rect.Height * pct2) + 1);
 
-            SizeF max_suf_bounds = dev.graph.MeasureString(big_suf, font, new Point(0, 0), fmt_default);
-            max_suffix_width = (int)(max_suf_bounds.Width + 1);
+			var tmpbrush = new LinearGradientBrush(rect2, c3, c4, LinearGradientMode.Vertical);
+			_dev.Graphics.FillRectangle(tmpbrush, rect2);
+			tmpbrush.Dispose();
 
+			tmpbrush = new LinearGradientBrush(rect1, c1, c2, LinearGradientMode.Vertical);
+			_dev.Graphics.FillRectangle(tmpbrush, rect1);
+			tmpbrush.Dispose();
+		}
 
-            SizeF max_lab_bounds = dev.graph.MeasureString(big_lab, font, new Point(0, 0), fmt_default);
-            max_lab_width = (int)(max_lab_bounds.Width);
+		protected void RenderString(string str, int line, int column, ref int[] cOffsets, StringFormat fmt,
+			FontStyle style = FontStyle.Regular, bool backRect = false, float curFontPt = 0.0f, float xoffset = 0.0f,
+			float yoffset = 0.0f)
+		{
+			if (!IsActive)
+			{
+				return;
+			}
 
-            int small_col = max_lab_width;
-            int large_col = (width - (small_col * 2)) / 2;
+			// ReSharper disable once CompareOfFloatsByEqualityOperator
+			var cfont = new Font(_dev.FontNames[_dev.CurrentFontIndex], curFontPt == 0 ? _fontPt : curFontPt, style);
+			CalcColumns(cfont);
 
-            line_offset = (float)Math.Round(font.GetHeight());
+			xoffset += _xOff;
+			yoffset += _yOff;
+			var rect1 = new Rectangle((int)(cOffsets[column] + xoffset),
+				(int)(Math.Floor(_lineOffset * line) + yoffset),
+				cOffsets[column + 1] - cOffsets[column], //+xoffset 
+				(int)(Math.Ceiling(_lineOffset))); // +yoffset
 
-            if (two_column_labeled_offsets == null)
-                two_column_labeled_offsets = new int[5];
-            two_column_labeled_offsets[0] = xoff + 0;
-            two_column_labeled_offsets[1] = xoff + small_col;
-            two_column_labeled_offsets[2] = two_column_labeled_offsets[1] + large_col;
-            two_column_labeled_offsets[3] = two_column_labeled_offsets[2] + small_col;
-            two_column_labeled_offsets[4] = xoff + width;
+			if (backRect)
+			{
+				FillRectGradient(rect1, 0.5f, _backRectC1, _backRectC2, 0.5f, _backRectC2, _backRectC1);
+				_dev.Graphics.DrawString(str, cfont, _dev.InvertedTxtBrush, rect1, fmt);
+			}
+			else
+			{
+				_dev.Graphics.DrawString(str, cfont, _dev.DefaultTxtBrush, rect1, fmt);
+			}
 
-            if (two_column_offsets == null)
-                two_column_offsets = new int[3];
-            two_column_offsets[0] = xoff + 0;
-            two_column_offsets[1] = xoff + width / 2;
-            two_column_offsets[2] = xoff + width;
-        }
+			cfont.Dispose();
+		}
 
-        public void FillRectGradient(Rectangle rect, float pct1, Color c1, Color c2, float pct2, Color c3, Color c4)
-        {
-            Rectangle rect1 = new Rectangle(rect.X, rect.Y, rect.Width, (int)Math.Ceiling((float)(rect.Height * pct1)));
-            Rectangle rect2 = new Rectangle(rect.X, rect.Y + rect1.Height-1, rect.Width, (int)Math.Ceiling((float)(rect.Height *pct2))+1 );
-            
-            System.Drawing.Drawing2D.LinearGradientBrush tmpbrush = new System.Drawing.Drawing2D.LinearGradientBrush(rect2, c3, c4, System.Drawing.Drawing2D.LinearGradientMode.Vertical);
-            dev.graph.FillRectangle(tmpbrush, rect2);
-            tmpbrush.Dispose();
-
-             tmpbrush = new System.Drawing.Drawing2D.LinearGradientBrush(rect1, c1, c2, System.Drawing.Drawing2D.LinearGradientMode.Vertical);
-            dev.graph.FillRectangle(tmpbrush, rect1);
-            tmpbrush.Dispose();
-        }
-        
-        protected void RenderString(String str, int line, int column, ref int[] c_offsets, StringFormat fmt, System.Drawing.FontStyle style = System.Drawing.FontStyle.Regular, bool back_rect = false, float cur_font_pt = 0.0f, float xoffset = 0.0f, float yoffset = 0.0f)
-        {
-            if (!active)
-                return;
-
-            System.Drawing.Font cfont = new System.Drawing.Font(dev.font_names[dev.cur_font], cur_font_pt == 0 ? font_pt : cur_font_pt, style);
-            CalcColumns(cfont);
-            
-            xoffset += xoff;
-            yoffset += yoff;
-            Rectangle rect1 = new Rectangle((int)(c_offsets[column] + xoffset), 
-                                                  (int)(Math.Floor(line_offset * line) + yoffset), 
-                                                  (int)(c_offsets[column + 1] - c_offsets[column]), //+xoffset 
-                                                  (int)(Math.Ceiling(line_offset)));// +yoffset
-           
-            if (back_rect)
-            {
-                FillRectGradient(rect1, 0.5f, back_rect_c1, back_rect_c2, 0.5f, back_rect_c2, back_rect_c1);             
-                dev.graph.DrawString(str, cfont, dev.inverted_txt_brush, rect1, fmt);
-            }
-            else
-            {
-                dev.graph.DrawString(str, cfont, dev.default_txt_brush, rect1, fmt);
-            }
-            
-            cfont.Dispose();
-        }
-    }
+		/// <summary>
+		///     Calculates the dimensions of the rendering area based on the dimensions of the supplied <see cref="Rectangle" />.
+		///     If the supplied <see cref="Rectangle" /> has a <see cref="Rectangle.Width" /> & <see cref="Rectangle.Height" /> are
+		///     both set to 0, then the dimensions will be set to the size of the entire device display, otherwise they will be set
+		///     to the values of the suppled <see cref="Rectangle" />.
+		/// </summary>
+		/// <param name="rect">
+		///     A<see cref="Rectangle" /> that defines the area to be rendered to, or else a rectangle with a
+		///     <see cref="Rectangle.Width" /> & <see cref="Rectangle.Height" /> both set to 0 to set the dimensions to the full
+		///     size of the device dislay.
+		/// </param>
+		protected void CalculateRenderDimensions(Rectangle rect)
+		{
+			if (rect.Width != 0 && rect.Height != 0)
+			{
+				_width = rect.Width;
+				_height = rect.Height;
+				_xOff = rect.X;
+				_yOff = rect.Y;
+			}
+			else
+			{
+				_width = _dev.Width;
+				_height = _dev.Height;
+				_xOff = 0;
+				_yOff = 0;
+			}
+		}
+		#endregion
+	}
 }

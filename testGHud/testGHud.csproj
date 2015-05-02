@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>testGHud</RootNamespace>
     <AssemblyName>testGHud</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <PublishUrl>publish\</PublishUrl>
@@ -53,9 +53,6 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>..\KSPFiles\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="GHud">
-      <HintPath>..\GHud\bin\Debug\GHud.dll</HintPath>
-    </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
@@ -92,6 +89,12 @@
       <ProductName>Windows Installer 4.5</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GHud\GHud.csproj">
+      <Project>{93fbf40c-6042-4078-9aae-0ba3a7be44ae}</Project>
+      <Name>GHud</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

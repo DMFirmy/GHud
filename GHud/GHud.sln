@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2012 for Windows Desktop
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GHud", "GHud.csproj", "{93FBF40C-6042-4078-9AAE-0BA3A7BE44AE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F74D6206-62D4-4AFF-BDAB-F88F5DB7DC63}"
+	ProjectSection(SolutionItems) = preProject
+		..\KSPFiles\KSP DLL's Here.txt = ..\KSPFiles\KSP DLL's Here.txt
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "testGHud", "..\testGHud\testGHud.csproj", "{CF691EEB-1477-4BFC-9A5A-BA00F8780507}"
 EndProject

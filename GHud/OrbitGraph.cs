@@ -1,323 +1,352 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Drawing;
-
+using System.Drawing.Drawing2D;
 
 namespace GHud
 {
+	// Display module which displays a rendering of the current orbit and its parent body.
+	internal class OrbitGraph : DisplayModule
+	{
+		#region Constructors
+		public OrbitGraph(Device dev, Color orbPenColor, string monicer)
+			: base(dev)
+		{
+			_name = "Orbit Graph";
+			_selectable = false;
+			_isActive = false;
 
-    // Display module which displays a rendering of the current orbit and its parent body.
-    class OrbitGraph: DisplayModule
-    {
-        protected Pen orbitpen;
-        
-        protected double ApR;
-        protected double PeR;
-        protected double ApA;
-        protected double PeA;
-        
-        protected double semi_major_axis;
-        protected double semi_minor_axis;
-        protected double eccentricity;
-        protected double atmos_dia;
-        protected double dia;
-        protected Rectangle elliptical_rect;
-        protected System.Drawing.Color body_color;
+			_monicer = monicer;
 
-        protected double a;
-        protected double r;
-        protected Dictionary<string, System.Drawing.Color> body_colors;
-        protected String orphan_string;
+			_width = dev.Width;
+			_height = dev.Height;
 
-        public OrbitGraph(Device dev, System.Drawing.Color orbpen_color, String orphanstr) : base(dev)
-        {
-            name = "Orbit Graph";
-            selectable = false;
-            active = false;
+			_a = 0;
 
-            orphan_string = orphanstr;
+			// Define the rendering color of the various orbital bodies.
+			_bodyColors = new Dictionary<string, Color>
+			{
+				{"Sun", Color.Yellow},
+				{"Kerbol", Color.Yellow},
+				{"Moho", Color.Peru},
+				{"Eve", Color.BlueViolet},
+				{"Kerbin", Color.DodgerBlue},
+				{"Duna", Color.Firebrick},
+				{"Dres", Color.Gray},
+				{"Jool", Color.LimeGreen},
+				{"Eeloo", Color.LightGray},
+				{"Gilly", Color.DarkGray},
+				{"Mun", Color.DarkGray},
+				{"Minmus", Color.Gray},
+				{"Ike", Color.DarkGray},
+				{"Laythe", Color.DodgerBlue},
+				{"Vall", Color.Gray},
+				{"Tylo", Color.LightGray},
+				{"Bop", Color.Gray},
+				{"Pol", Color.SandyBrown},
+				{"Default", Color.DodgerBlue}
+			};
 
-            if (orbpen_color == null)
-                orbpen_color = System.Drawing.Color.Yellow;
+			_bodyColors.TryGetValue("Pol", out _bodyColor);
 
-            width = dev.width;
-            height = dev.height;
+			_orbitPen = new Pen(orbPenColor, 1.0f)
+			{
+				Alignment = PenAlignment.Outset
+			};
+		}
+		#endregion
 
-            a = 0;
+		#region Methods
+		// Gather and prepare data needed for rendering this frame.
+#if DEBUG
+		private void PrepData()
+		{
+#else
+		private void PrepData(Orbit orbit)
+		{
+			// Get the color of the body being orbited
+			if (!_bodyColors.TryGetValue(orbit.referenceBody.GetName(), out _bodyColor))
+			{
+				_bodyColors.TryGetValue("Default", out _bodyColor);
+			}
+#endif
 
-            // Define the rendering color of the various orbital bodies.
-            body_colors = new Dictionary<string, System.Drawing.Color>();
-            body_colors.Add("Sun", System.Drawing.Color.Yellow);
-            body_colors.Add("Kerbol", System.Drawing.Color.Yellow);
-            body_colors.Add("Moho", System.Drawing.Color.Peru);
-            body_colors.Add("Eve", System.Drawing.Color.BlueViolet);
-            body_colors.Add("Kerbin", System.Drawing.Color.DodgerBlue);
-            body_colors.Add("Duna", System.Drawing.Color.Firebrick);
-            body_colors.Add("Dres", System.Drawing.Color.Gray);
-            body_colors.Add("Jool", System.Drawing.Color.LimeGreen);
-            body_colors.Add("Eeloo", System.Drawing.Color.LightGray);
-            body_colors.Add("Gilly", System.Drawing.Color.DarkGray);
-            body_colors.Add("Mun", System.Drawing.Color.DarkGray);
-            body_colors.Add("Minmus", System.Drawing.Color.Gray);
-            body_colors.Add("Ike", System.Drawing.Color.DarkGray);
-            body_colors.Add("Laythe", System.Drawing.Color.DodgerBlue);
-            body_colors.Add("Vall", System.Drawing.Color.Gray);
-            body_colors.Add("Tylo", System.Drawing.Color.LightGray);
-            body_colors.Add("Bop", System.Drawing.Color.Gray);
-            body_colors.Add("Pol", System.Drawing.Color.SandyBrown);
-            body_colors.Add("Default", System.Drawing.Color.DodgerBlue);
-            
-            body_colors.TryGetValue("Pol", out body_color);
-            
-            orbitpen = new Pen(orbpen_color, 1.0f);
-            orbitpen.Alignment = System.Drawing.Drawing2D.PenAlignment.Outset;
-        }
+#if DEBUG
+			_r = 100000.0;
+			_a += 0.6;
+			if (_a > 360.0)
+			{
+				_a -= 360.0;
+			}
 
-        // setup some dummy values when in non-ksp test mode.
-        protected void PrepTestData(Rectangle rect)
-        {
-            if (rect.Width != 0 && rect.Height != 0)
-            {
-                width = rect.Width;
-                height = rect.Height;
-                xoff = rect.X;
-                yoff = rect.Y;
-            }
-            else
-            {
-                width = dev.width;
-                height = dev.height;
-                xoff = 0;
-                yoff = 0;
-            }
-            r = 100000.0;
-            a += 0.6;
-            if (a > 360.0)
-                a -= 360.0;
+			_dia = 80000.00;
+			_atmosDia = 120000.00;
+			_apR = 100000.00;
+			_peR = 100000.00;
 
-            dia = 80000.00;
-            atmos_dia = 120000.00;
-            ApR = 100000.00;
-            PeR = 100000.00;
-           
-            ApA = ApR + (dia / 2);
-            PeA = PeR + (dia / 2);
-            semi_major_axis = (ApR + PeR) / 2;
-            eccentricity = (ApR - PeR) / (ApR + PeR);
-            semi_minor_axis = semi_major_axis * (1 - eccentricity);
-        }
+			_apA = _apR + (_dia / 2);
+			_peA = _peR + (_dia / 2);
+			_semiMajorAxis = (_apR + _peR) / 2;
+			_eccentricity = (_apR - _peR) / (_apR + _peR);
+			_semiMinorAxis = _semiMajorAxis * (1 - _eccentricity);
+#else
+	// Orbit info
+			_apR = orbit.ApR;
+			_peR = orbit.PeR;
+			_apA = orbit.ApA;
+			_peA = orbit.PeA;
 
+			// Calc the diameter of the reference body and the diameter of its atmosphere
+			_dia = orbit.referenceBody.Radius*2;
+			_atmosDia = _dia + (orbit.referenceBody.atmosphereDepth*2);
 
-        // Gather and prepare data needed for rendering this frame.
-        protected void PrepData(Orbit orbit, Rectangle rect)
-        {
-            // Get the color of the body being orbited
-            if(!body_colors.TryGetValue(orbit.referenceBody.GetName(), out body_color)){
-                body_colors.TryGetValue("Default", out body_color);
-            }
-            
-            if (rect.Width != 0 && rect.Height != 0)
-            {
-                width = rect.Width;
-                height = rect.Height;
-                xoff = rect.X;
-                yoff = rect.Y;
-            }
-            else
-            {
-                width = dev.width;
-                height = dev.height;
-                xoff = 0;
-                yoff = 0;
-            }
+			_semiMajorAxis = orbit.semiMajorAxis;
+			_semiMinorAxis = orbit.semiMinorAxis;
+			_eccentricity = orbit.eccentricity;
 
-            // Orbit info
-            ApR = orbit.ApR;
-            PeR = orbit.PeR;
-            ApA = orbit.ApA;
-            PeA = orbit.PeA;
+			_r = orbit.RadiusAtTrueAnomaly(orbit.trueAnomaly);
+			_a = orbit.trueAnomaly; //(360.0 - orbit.trueAnomaly) + 90.0;
+#endif
+		}
 
-            // Calc the diameter of the reference body and the diameter of its atmosphere
-            dia = orbit.referenceBody.Radius * 2;
-            atmos_dia = dia + (orbit.referenceBody.maxAtmosphereAltitude * 2);
-                        
-            semi_major_axis = orbit.semiMajorAxis;
-            semi_minor_axis = orbit.semiMinorAxis;
-            eccentricity = orbit.eccentricity;
-            
-            r = orbit.RadiusAtTrueAnomaly(orbit.trueAnomaly);
-            a = orbit.trueAnomaly;//(360.0 - orbit.trueAnomaly) + 90.0;
-        }
+		private void DoRender(Rectangle rect)
+		{
+			var tmpfontPt = _dev.IsColor ? _fontPt - 2.0f : _fontPt;
+			var line = _dev.IsColor ? 1 : 0;
 
-        protected void DoRender(Rectangle rect)
-        {
-            // Render in the specified rectangle.  If the rect is 0, then use the whole device geometry
-            if (rect.Width != 0 && rect.Height != 0)
-            {
-                width = rect.Width;
-                height = rect.Height;
-                xoff = rect.X;
-                yoff = rect.Y;
-            }
-            else
-            {
-                width = dev.width;
-                height = dev.height;
-                xoff = 0;
-                yoff = 0;
-            }
+			RenderMonicer(line);
 
+			if (_companionMod == null || !_companionMod.IsActive)
+			{
+				RenderOrbitApoapsis(line, tmpfontPt);
+				RenderOrbitPeriapsis(line, tmpfontPt);
+			}
 
-            {
-                String orb_ap_suffix = "";
-                String orb_pe_suffix = "";
-                float tmpfont_pt = font_pt;
-                int line = 0;
-                if (dev.is_color)
-                {
-                    line++;
-                    tmpfont_pt -= 2.0f;
-                    RenderString(orphan_string, line + 1, 0, ref two_column_offsets, fmt_left, System.Drawing.FontStyle.Bold, false, font_pt + 1.0f);
-                }
-                else
-                {
-                    RenderString(orphan_string, line + 1, 0, ref two_column_offsets, fmt_left, System.Drawing.FontStyle.Bold, false, font_pt + 2.0f);
-                }
-                if (companion_mod == null || !companion_mod.active)
-                {
-                    RenderString("a:" + Util.xMuMech_ToSI(ApA, ref orb_ap_suffix) + orb_ap_suffix, line, 0, ref two_column_offsets, fmt_left, System.Drawing.FontStyle.Regular, false, tmpfont_pt);
-                    RenderString("p:" + Util.xMuMech_ToSI(PeA, ref orb_pe_suffix) + orb_pe_suffix, line, 1, ref two_column_offsets, fmt_right, System.Drawing.FontStyle.Regular, false, tmpfont_pt);
-                }
-            }
+			if (IsLeavingSoi())
+			{
+				ModuleMsg("Leaving Sphere of Influence", rect);
+			}
 
-            // We are leaving the sphere of influence,  no orbit can be drawn.
-            if (ApR < 0 && ApR < PeR)
-            {
-                ModuleMsg("Leaving Sphere of Influence", rect);
-                return;
-            }
+			var orbitGeometry = CalculateOrbitGeometry();
 
-            int border = 3;
-            // The bounding box for the drawing
-            Rectangle dr = new Rectangle(xoff + border, yoff + border, (int)(width - (border * 2)), (int)(height - (border * 2)));
+			RenderOrbit(orbitGeometry);
 
-            // Calculate scaling factor used to scale from KSP orbital sizes down to device pixels
-            double width_mod = dr.Width / (semi_major_axis * 2);
-            double height_mod = dr.Height / (semi_minor_axis * 2);
+			var bodyGeometry = CalculateBodyGeometry(orbitGeometry);
 
-            double atmos_mod = Math.Min(dr.Width, dr.Height) / atmos_dia;
+			RenderBody(bodyGeometry);
 
-            // Use the smallest of the scaling factors
-            double mod = Math.Min(atmos_mod, Math.Min(width_mod, height_mod));
+			var vesselGeometry = CalculateVesselGeometry(orbitGeometry, bodyGeometry);
 
-            // Ellipse geometry scaled to display area
-            double el_width = (semi_major_axis * 2) * mod;
-            double el_height = (semi_minor_axis * 2) * mod;
-            int elx = (int)(dr.X + ((dr.Width - el_width) / 2));
-            int ely = (int)(dr.Y + ((dr.Height - el_height) / 2));
+			RenderVessel(vesselGeometry);
 
-            // Draw the ellipse
-            elliptical_rect = new Rectangle(elx, ely, (int)(el_width), (int)(el_height));
-            if (elliptical_rect.Height < 0)
-                elliptical_rect.Height = 1;
-            dev.graph.DrawEllipse(orbitpen, elliptical_rect);
+			// Calculate and draw the atmosphere.  This is drawn over the body with and alpha level.
+			// By drawing this last, we get the effect of seeing the orbit and vessel behind the atmostphere.
+			if (!_dev.IsColor)
+			{
+				return;
+			}
+			var atmosphereGeometry = CalculateAtmosphereGeometry(orbitGeometry, bodyGeometry);
 
-            // Scale and draw the body
-            double body_dia = dia * mod;
-            // Determine the scaled location where the body should be centered
-            double centerx = (elx + (el_width / 2)) - (body_dia / 2);
-            double centery = (ely + (el_height / 2)) - (body_dia / 2);
-            double body_xoff = (semi_major_axis - PeR) * mod;
-            double body_x = centerx + body_xoff;
+			RenderAtmosphere(atmosphereGeometry);
+		}
 
-            // Draw the body
-            Rectangle body_rect = new Rectangle((int)body_x, (int)centery, (int)body_dia, (int)body_dia);
-            if (dev.is_color)
-            {
-                System.Drawing.Brush body_brush = new System.Drawing.SolidBrush(body_color);
-                dev.graph.FillEllipse(body_brush, body_rect);
-                body_brush.Dispose();
-            }
-            else
-            {
-                dev.graph.FillEllipse(dev.inverted_clear_brush, body_rect);
-            }
+		private void RenderAtmosphere(AtmosphereGeometry atmosphereGeometry)
+		{
+			var atmosRect = new Rectangle((int)atmosphereGeometry.X, (int)atmosphereGeometry.CenterY, (int)atmosphereGeometry.Dia, (int)atmosphereGeometry.Dia);
+			var atmosInnerRect = new Rectangle((int)(atmosphereGeometry.X + atmosphereGeometry.PosReduction), (int)(atmosphereGeometry.CenterY + atmosphereGeometry.PosReduction),
+				(int)(atmosphereGeometry.Dia - (atmosphereGeometry.Reduction)), (int)(atmosphereGeometry.Dia - (atmosphereGeometry.Reduction)));
 
-            // Calculate the drawing location of the vessel on the ellipse.
-            double aradian = (a + 90) * (Math.PI / 180);
-            double x = (r * Math.Sin(aradian)) * mod;
-            double y = (r * Math.Cos(aradian)) * mod;
-            int xx = (int)(x + body_x + (body_dia / 2));
-            int yy = (int)(y + centery + (body_dia / 2));
+			using (var atmosBrush = new SolidBrush(Color.FromArgb(100, _bodyColor.R, _bodyColor.G, _bodyColor.B)))
+			{
+				_dev.Graphics.FillEllipse(atmosBrush, atmosInnerRect);
+				_dev.Graphics.FillEllipse(atmosBrush, atmosRect);
+			}
+		}
 
-            int vi_rad = (int)(dev.font_pt / 3);
-            Rectangle vessel_rect = new Rectangle(xx - vi_rad, yy - vi_rad, vi_rad * 2, vi_rad * 2);
-            dev.graph.FillEllipse(dev.inverted_clear_brush, vessel_rect);
+		private void RenderVessel(VesselGeometry vesselGeometry)
+		{
+			var vesselRect = new Rectangle((int)(vesselGeometry.XX - vesselGeometry.Radius), (int)(vesselGeometry.YY - vesselGeometry.Radius), (int)vesselGeometry.Radius * 2, (int)vesselGeometry.Radius * 2);
+			_dev.Graphics.FillEllipse(_dev.InvertedClearBrush, vesselRect);
+		}
 
+		private void RenderBody(BodyGeometry bodyGeometry)
+		{
+// Draw the body
+			var bodyRect = new Rectangle((int)bodyGeometry.X, (int)bodyGeometry.CenterY, (int)bodyGeometry.Dia, (int)bodyGeometry.Dia);
+			if (_dev.IsColor)
+			{
+				Brush bodyBrush = new SolidBrush(_bodyColor);
+				_dev.Graphics.FillEllipse(bodyBrush, bodyRect);
+				bodyBrush.Dispose();
+			}
+			else
+			{
+				_dev.Graphics.FillEllipse(_dev.InvertedClearBrush, bodyRect);
+			}
+		}
 
-            // Calculate and draw the atmosphere.  This is drawn over the body with and alpha level.
-            // By drawing this last, we get the effect of seeing the orbit and vessel behind the atmostphere.
-            if (dev.is_color)
-            {
-                double atmosdia = atmos_dia * mod;
-                double atmos_centerx = (elx + (el_width / 2)) - (atmosdia / 2);
-                double atmos_centery = (ely + (el_height / 2)) - (atmosdia / 2);
-                double atmos_x = atmos_centerx + body_xoff;
-                Rectangle atmos_rect = new Rectangle((int)atmos_x, (int)atmos_centery, (int)atmosdia, (int)atmosdia);
+		private void RenderOrbit(OrbitGeometry orbitGeometry)
+		{
+// Draw the ellipse
+			_ellipticalRect = new Rectangle(orbitGeometry.X, orbitGeometry.Y, (int)(orbitGeometry.Width), (int)(orbitGeometry.Height));
+			if (_ellipticalRect.Height < 0)
+			{
+				_ellipticalRect.Height = 1;
+			}
+			_dev.Graphics.DrawEllipse(_orbitPen, _ellipticalRect);
+		}
 
-                double reduction = (atmosdia - body_dia) / 2;
-                double pos_reduction = reduction / 2;
-                Rectangle atmos_inner_rect = new Rectangle((int)(atmos_x + pos_reduction), (int)(atmos_centery + pos_reduction), (int)(atmosdia - (reduction)), (int)(atmosdia - (reduction)));
-                System.Drawing.Brush atmos_brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(100, (int)body_color.R, (int)body_color.G, (int)body_color.B));
+		private void RenderMonicer(int line)
+		{
+			if (_dev.IsColor)
+			{
+				line++;
+				RenderString(_monicer, line + 1, 0, ref _twoColumnOffsets, _fmtLeft, FontStyle.Bold, false, _fontPt + 1.0f);
+			}
+			else
+			{
+				RenderString(_monicer, line + 1, 0, ref _twoColumnOffsets, _fmtLeft, FontStyle.Bold, false, _fontPt + 2.0f);
+			}
+		}
 
-                dev.graph.FillEllipse(atmos_brush, atmos_inner_rect);
-                dev.graph.FillEllipse(atmos_brush, atmos_rect);
-                atmos_brush.Dispose();
-            }
+		private void RenderOrbitApoapsis(int line, float fontSize)
+		{
+			var orbApSuffix = string.Empty;
+			RenderString("a:" + Util.xMuMech_ToSI(_apA, ref orbApSuffix) + orbApSuffix, line, 0, ref _twoColumnOffsets, _fmtLeft,
+				FontStyle.Regular, false, fontSize);
+		}
 
+		private void RenderOrbitPeriapsis(int line, float fontSize)
+		{
+			var orbPeSuffix = string.Empty;
+			RenderString("p:" + Util.xMuMech_ToSI(_peA, ref orbPeSuffix) + orbPeSuffix, line, 1, ref _twoColumnOffsets,
+					_fmtRight, FontStyle.Regular, false, fontSize);
+		}
 
-            
-        }
+		private bool IsLeavingSoi()
+		{
+			// We are leaving the sphere of influence,  no orbit can be drawn.
+			if (_apR < 0 && _apR < _peR)
+			{
+				return true;
+			}
+			return false;
+		}
 
-        public override void TestRender(Rectangle rect)
-        {
-            if (!active)
-                return;
-            /*
-            if (orbit == null)
-            {
-                if (is_target_type_module)
-                    ModuleMsg("No Target", rect);
-                else
-                    ModuleMsg("Null Orbit", rect);
+		private OrbitGeometry CalculateOrbitGeometry()
+		{
+			const int border = 3;
+			var geometry = new OrbitGeometry();
+			// The bounding box for the drawing
+			var dr = new Rectangle(_xOff + border, _yOff + border, _width - (border * 2), _height - (border * 2));
 
-                return;
-            }
-             */
+			// Calculate scaling factor used to scale from KSP orbital sizes down to device pixels
+			var widthMod = dr.Width / (_semiMajorAxis * 2);
+			var heightMod = dr.Height / (_semiMinorAxis * 2);
 
-            PrepTestData(rect);
-            DoRender(rect);
-        }
+			var atmosMod = Math.Min(dr.Width, dr.Height) / _atmosDia;
 
-       
-        public override void Render(Rectangle rect)
-        {
-            if (!active)
-                return;
+			// Use the smallest of the scaling factors
+			geometry.ScaleFactor = Math.Min(atmosMod, Math.Min(widthMod, heightMod));
 
-            if (orbit == null)
-            {
-                if (is_target_type_module)
-                    ModuleMsg("No Target", rect);
-                else
-                    ModuleMsg("Null Orbit", rect);
-              
-                return;
-            }
+			// Ellipse geometry scaled to display area
+			geometry.Width = (_semiMajorAxis * 2) * geometry.ScaleFactor;
+			geometry.Height = (_semiMinorAxis * 2) * geometry.ScaleFactor;
+			geometry.X = (int)(dr.X + ((dr.Width - geometry.Width) / 2));
+			geometry.Y = (int)(dr.Y + ((dr.Height - geometry.Height) / 2));
 
-            PrepData(orbit, rect);
-            DoRender(rect);
-        }
-    }
+			return geometry;
+		}
+
+		private BodyGeometry CalculateBodyGeometry(OrbitGeometry orbitGeometry)
+		{
+			var geometry = new BodyGeometry();
+
+			// Scale and draw the body
+			geometry.Dia = _dia * orbitGeometry.ScaleFactor;
+
+			// Determine the scaled location where the body should be centered
+			geometry.CenterX = (orbitGeometry.X + (orbitGeometry.Width / 2)) - (geometry.Dia / 2);
+			geometry.CenterY = (orbitGeometry.Y + (orbitGeometry.Height / 2)) - (geometry.Dia / 2);
+			geometry.XOffset = (_semiMajorAxis - _peR) * orbitGeometry.ScaleFactor;
+			geometry.X = geometry.CenterX + geometry.XOffset;
+			
+			return geometry;
+		}
+		
+		private VesselGeometry CalculateVesselGeometry(OrbitGeometry orbitGeometry, BodyGeometry bodyGeometry)
+		{
+			// Calculate the drawing location of the vessel on the ellipse.
+			var geometry = new VesselGeometry();
+
+			geometry.ARadian = (_a + 90) * (Math.PI / 180);
+			geometry.X = (_r * Math.Sin(geometry.ARadian)) * orbitGeometry.ScaleFactor;
+			geometry.Y = (_r * Math.Cos(geometry.ARadian)) * orbitGeometry.ScaleFactor;
+			geometry.XX = (int)(geometry.X + bodyGeometry.X + (bodyGeometry.Dia / 2));
+			geometry.YY = (int)(geometry.Y + bodyGeometry.CenterY + (bodyGeometry.Dia / 2));
+
+			geometry.Radius = (int)(_dev.FontSize / 3);
+
+			return geometry;
+		}
+
+		private AtmosphereGeometry CalculateAtmosphereGeometry(OrbitGeometry orbitGeometry, BodyGeometry bodyGeometry)
+		{
+			var geometry = new AtmosphereGeometry();
+
+			geometry.Dia = _atmosDia * orbitGeometry.ScaleFactor;
+			geometry.CenterX = (orbitGeometry.X + (orbitGeometry.Width / 2)) - (geometry.Dia / 2);
+			geometry.CenterY = (orbitGeometry.Y + (orbitGeometry.Height / 2)) - (geometry.Dia / 2);
+			geometry.X = geometry.CenterX + bodyGeometry.XOffset;
+
+			geometry.Reduction = (geometry.Dia - bodyGeometry.Dia) / 2;
+			geometry.PosReduction = geometry.Reduction / 2;
+
+			return geometry;
+		}
+		
+		public override void Render(Rectangle rect)
+		{
+			if (!IsActive)
+			{
+				return;
+			}
+
+			// Render in the specified rectangle.  If the rect is 0, then use the whole device geometry
+			CalculateRenderDimensions(rect);
+#if !DEBUG
+			if (_orbit == null)
+			{
+				ModuleMsg(IsTargetTypeModule ? "No Target" : "Null Orbit", rect);
+				return;
+			}
+#endif
+#if DEBUG
+			PrepData();
+#else
+			PrepData(_orbit);
+#endif
+			DoRender(rect);
+		}
+		#endregion
+
+		#region Fields
+		private readonly Pen _orbitPen;
+		private double _apR;
+		private double _peR;
+		private double _apA;
+		private double _peA;
+		private double _semiMajorAxis;
+		private double _semiMinorAxis;
+		private double _eccentricity;
+		private double _atmosDia;
+		private double _dia;
+		private Rectangle _ellipticalRect;
+		private Color _bodyColor;
+		private double _a;
+		private double _r;
+		private readonly Dictionary<string, Color> _bodyColors;
+		private readonly String _monicer;
+		#endregion
+	}
 }

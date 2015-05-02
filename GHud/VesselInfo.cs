@@ -1,358 +1,271 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Drawing;
-using UnityEngine;
+using System.Drawing.Imaging;
 
 namespace GHud
 {
+	// This is a hybrid displaymodule.  It contains both and orbitinfo and orbit graph displaymodule and splits them on the screen.
+	internal class VesselInfo : DisplayModule
+	{
+		#region Constructors
+		public VesselInfo(Device dev) : base(dev)
+		{
+			_name = "Vessel";
+			_selectable = true;
+			_isActive = false;
 
-    // This is a hybrid displaymodule.  It contains both and orbitinfo and orbit graph displaymodule and splits them on the screen.
-    class VesselInfo : DisplayModule
-    {
-        List<DisplayModule> top_modules = new List<DisplayModule>();
-        List<DisplayModule> bottom_modules = new List<DisplayModule>();
-        DisplayModule active_top_mod;
-        DisplayModule active_bottom_mod;
-        
-        protected OrbitInfo orbitinfo;
-        protected OrbitInfo target_orbitinfo;
-        protected OrbitGraph orbitgraph;
-        protected OrbitGraph target_orbitgraph;
+			_width = dev.Width;
+			_height = dev.Height;
+			_xOff = 0;
+			_yOff = 0;
 
-        protected Image background;
-        protected System.Drawing.Imaging.ColorMatrix colmatrix;
-        protected System.Drawing.Imaging.ImageAttributes img_attr;
+			const string vesselMonicer = "✈";
+			const string targetMonicer = "+";
 
-        
+			var orbitInfo = new OrbitInfo(dev, vesselMonicer, Color.FromArgb(0xee, 0xee, 0x00), Color.FromArgb(0xaa, 0xaa, 0x44));
+			var targetOrbitInfo = new OrbitInfo(dev, targetMonicer, Color.LightBlue, Color.MediumPurple);
 
-        public VesselInfo(Device dev) : base(dev)
-        {
-            name = "Vessel";
-            selectable = true;
-            active = false;
+			var orbitGraph = new OrbitGraph(dev, Color.Yellow, vesselMonicer);
+			var targetOrbitGraph = new OrbitGraph(dev, Color.LightBlue, targetMonicer);
 
-            width = dev.width;
-            height = dev.height;
-            xoff = 0;
-            yoff = 0;
+			orbitGraph.CompanionMod = orbitInfo;
+			orbitInfo.CompanionMod = orbitGraph;
 
+			targetOrbitInfo.IsTargetTypeModule = true;
+			targetOrbitGraph.IsTargetTypeModule = true;
+			targetOrbitInfo.CompanionMod = targetOrbitGraph;
+			targetOrbitGraph.CompanionMod = targetOrbitInfo;
 
-            orbitinfo = new OrbitInfo(dev, "✈", System.Drawing.Color.FromArgb(0xee, 0xee, 0x00), System.Drawing.Color.FromArgb(0xaa, 0xaa, 0x44));
-            target_orbitinfo = new OrbitInfo(dev, "+", System.Drawing.Color.LightBlue, System.Drawing.Color.MediumPurple);
+			orbitInfo.Activate();
+			_activeTopMod = orbitInfo;
+			orbitGraph.Activate();
+			_activeBottomMod = orbitGraph;
 
-            orbitgraph = new OrbitGraph(dev, System.Drawing.Color.Yellow, "✈");
-            target_orbitgraph = new OrbitGraph(dev, System.Drawing.Color.LightBlue, "+");
+			orbitInfo.ModuleId = 1;
+			targetOrbitInfo.ModuleId = 2;
+			orbitGraph.ModuleId = 3;
+			targetOrbitGraph.ModuleId = 4;
 
-            orbitgraph.companion_mod = orbitinfo;
-            orbitinfo.companion_mod = orbitgraph;
+			_topModules.Add(orbitInfo);
+			_topModules.Add(targetOrbitInfo);
+			_bottomModules.Add(orbitGraph);
+			_bottomModules.Add(targetOrbitGraph);
 
-            target_orbitinfo.is_target_type_module = true;
-            target_orbitgraph.is_target_type_module = true;
-            target_orbitinfo.companion_mod = target_orbitgraph;
-            target_orbitgraph.companion_mod = target_orbitinfo;
+			orbitInfo = new OrbitInfo(dev, "✈", Color.FromArgb(0xee, 0xee, 0x00), Color.FromArgb(0xaa, 0xaa, 0x44));
+			targetOrbitInfo = new OrbitInfo(dev, "+", Color.LightBlue, Color.MediumPurple);
 
-            orbitinfo.Activate();
-            active_top_mod = orbitinfo;
-            orbitgraph.Activate();
-            active_bottom_mod = orbitgraph;
+			orbitGraph = new OrbitGraph(dev, Color.Yellow, "✈");
+			targetOrbitGraph = new OrbitGraph(dev, Color.LightBlue, "+");
 
-            orbitinfo.modid = 1;
-            target_orbitinfo.modid = 2;
-            orbitgraph.modid = 3;
-            target_orbitgraph.modid = 4;
+			orbitGraph.CompanionMod = orbitInfo;
+			orbitInfo.CompanionMod = orbitGraph;
 
-            top_modules.Add(orbitinfo);
-            top_modules.Add(target_orbitinfo);
-            bottom_modules.Add(orbitgraph);
-            bottom_modules.Add(target_orbitgraph);
+			targetOrbitInfo.IsTargetTypeModule = true;
+			targetOrbitGraph.IsTargetTypeModule = true;
+			targetOrbitInfo.CompanionMod = targetOrbitGraph;
+			targetOrbitGraph.CompanionMod = targetOrbitInfo;
 
+			orbitInfo.ModuleId = 1;
+			targetOrbitInfo.ModuleId = 2;
+			orbitGraph.ModuleId = 3;
+			targetOrbitGraph.ModuleId = 4;
 
-            orbitinfo = new OrbitInfo(dev, "✈", System.Drawing.Color.FromArgb(0xee, 0xee, 0x00), System.Drawing.Color.FromArgb(0xaa, 0xaa, 0x44));
-            target_orbitinfo = new OrbitInfo(dev, "+", System.Drawing.Color.LightBlue, System.Drawing.Color.MediumPurple);
+			_bottomModules.Add(orbitInfo);
+			_bottomModules.Add(targetOrbitInfo);
+			_topModules.Add(orbitGraph);
+			_topModules.Add(targetOrbitGraph);
 
-            orbitgraph = new OrbitGraph(dev, System.Drawing.Color.Yellow, "✈");
-            target_orbitgraph = new OrbitGraph(dev, System.Drawing.Color.LightBlue, "+");
+			if (dev.UseBackdrops)
+			{
+				_background = Image.FromFile("stars.gif");
+			}
 
-            orbitgraph.companion_mod = orbitinfo;
-            orbitinfo.companion_mod = orbitgraph;
+			var colmatrix = new ColorMatrix {Matrix33 = 0.7F};
+			_imgAttr = new ImageAttributes();
+			_imgAttr.SetColorMatrix(colmatrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
 
-            target_orbitinfo.is_target_type_module = true;
-            target_orbitgraph.is_target_type_module = true;
-            target_orbitinfo.companion_mod = target_orbitgraph;
-            target_orbitgraph.companion_mod = target_orbitinfo;
+			dev.ButtonUp += ButtonUp;
+			dev.ButtonDown += ButtonDown;
+		}
+		#endregion
 
-            orbitinfo.modid = 1;
-            target_orbitinfo.modid = 2;
-            orbitgraph.modid = 3;
-            target_orbitgraph.modid = 4;
+		#region Fields
+		private List<DisplayModule> _topModules = new List<DisplayModule>();
+		private List<DisplayModule> _bottomModules = new List<DisplayModule>();
+		private DisplayModule _activeTopMod;
+		private DisplayModule _activeBottomMod;
 
-            bottom_modules.Add(orbitinfo);
-            bottom_modules.Add(target_orbitinfo);
-            top_modules.Add(orbitgraph);
-            top_modules.Add(target_orbitgraph);
-            
-            if(dev.use_backdrops)
-                background = Image.FromFile("stars.gif");
+		private readonly Image _background;
+		private readonly ImageAttributes _imgAttr;
+		#endregion
 
-            colmatrix = new System.Drawing.Imaging.ColorMatrix();
-            colmatrix.Matrix33 = 0.7F;
-            img_attr = new System.Drawing.Imaging.ImageAttributes();
-            img_attr.SetColorMatrix(colmatrix, System.Drawing.Imaging.ColorMatrixFlag.Default, System.Drawing.Imaging.ColorAdjustType.Bitmap);
-            
-            dev.ButtonUP += new Device.ButtonHandler(ButtonUp);
-            dev.ButtonDOWN += new Device.ButtonHandler(ButtonDown);
-        }
+		#region Methods
+		protected override void Clear()
+		{
+			base.Clear();
 
+			if (_dev.UseBackdrops)
+			{
+				_dev.Graphics.DrawImage(_background, new Rectangle(0, 0, _width, _height), 0, 0, _background.Width,
+					_background.Height, GraphicsUnit.Pixel, _imgAttr);
+			}
+		}
 
-        public override void Clear()
-        {
-            base.Clear();
+		private static void ActivateModule(DisplayModule newActiveMod, ref DisplayModule changeActiveMod,
+			ref DisplayModule otherActiveMod)
+		{
+			changeActiveMod.Deactivate();
+			changeActiveMod = newActiveMod;
+			changeActiveMod.Activate();
+			otherActiveMod.Activate();
+		}
 
-            if (dev.use_backdrops)
-            {
-                dev.graph.DrawImage(background, new Rectangle(0, 0, width, height), 0, 0, background.Width,
-                                    background.Height, GraphicsUnit.Pixel, img_attr);
-            }
-        }
+		private static void CycleModules(ref List<DisplayModule> changelist, ref DisplayModule changeActiveMod,
+			ref DisplayModule otherActiveMod)
+		{
+			var activateFirst = false;
+			while (true)
+			{
+				var activateNext = false;
+				var activated = false;
 
-        private bool ActivateModule(DisplayModule new_active_mod, ref DisplayModule change_active_mod, ref DisplayModule other_active_mod)
-        {
-            /*
-            if (((other_active_mod == change_active_mod.companion_mod && new_active_mod.companion_mod.GetType() == other_active_mod.GetType()) ||
-                new_active_mod.companion_mod.GetType() == other_active_mod.GetType()) && 
-                new_active_mod.companion_mod != null
-                )
-            {
-                other_active_mod.Deactivate();
-                other_active_mod = new_active_mod.companion_mod;  
-            }
-             */
-            change_active_mod.Deactivate();
-            change_active_mod = new_active_mod;
-            change_active_mod.Activate();
-            other_active_mod.Activate();
-            return true;
-        }
+				if (activateFirst)
+				{
+					ActivateModule(changelist[0], ref changeActiveMod, ref otherActiveMod);
+					return;
+				}
 
-        private void CycleModules(ref List<DisplayModule> changelist, ref List<DisplayModule> otherlist,
-                                    ref DisplayModule change_active_mod, ref DisplayModule other_active_mod, bool activate_first)
-        {
-            bool activate_next = false;
-            bool activated = false;
+				foreach (var mod in changelist)
+				{
+					if (activateNext)
+					{
+						if (mod.ModuleId == otherActiveMod.ModuleId)
+						{
+							continue;
+						}
+						ActivateModule(mod, ref changeActiveMod, ref otherActiveMod);
 
-            if (activate_first)
-            {
-                ActivateModule(changelist[0], ref change_active_mod, ref other_active_mod);
-                return;
-            }
+						activateNext = false;
+						activated = true;
+					}
+					else
+					{
+						if (mod.IsActive)
+						{
+							activateNext = true;
+						}
+					}
+				}
+				if (!activated)
+				{
+					// Activate the first module since we were at the end of the list
+					activateFirst = true;
+					continue;
+				}
+				break;
+			}
+		}
 
-            foreach (DisplayModule mod in changelist)
-            {
-                if (activate_next)
-                {
-                    if (mod.modid == other_active_mod.modid)
-                        continue;
-                    ActivateModule(mod, ref change_active_mod, ref other_active_mod);
-                     
-                    activate_next = false;
-                    activated = true;
-                }
-                else
-                {
-                    if (mod.active)
-                    {
-                        activate_next = true;
-                    }
-                }
-            
-            }
-            if (!activated)
-            {
-                // Activate the first module since we were at the end of the list
-                CycleModules(ref changelist, ref otherlist, ref change_active_mod, ref other_active_mod, true);
-            }
+		private void ButtonUp(object sender, EventArgs e)
+		{
+			if (!IsActive)
+			{
+				return;
+			}
 
-        }
+			CycleModules(ref _topModules, ref _activeTopMod, ref _activeBottomMod);
+		}
 
-        /*
-        public override void SetOrbit(Orbit argorbit, String obj_name = "Unknown")
-        {
-            base.SetOrbit(argorbit, obj_name);
+		private void ButtonDown(object sender, EventArgs e)
+		{
+			var dev = sender as Device;
+			if (!IsActive || dev == null)
+			{
+				return;
+			}
 
-            List<DisplayModule> list = top_modules + bottom_modules;
+			if (dev.IsColor)
+			{
+				CycleModules(ref _bottomModules, ref _activeBottomMod, ref _activeTopMod);
+			}
+		}
 
-            foreach (DisplayModule mod in list)
-            {
-                ITargetable tgt;
-                if (mod.is_target_type_module)
-                {
-                    tgt = FlightGlobals.fetch.VesselTarget;
-                    mod.SetOrbit(tgt == null ? null : tgt.GetOrbit(), tgt == null ? null : tgt.GetName());
-                }
-                else
-                {
-                    mod.SetOrbit(argorbit, obj_name);
-                }
-            }
+		private void RenderModules(IEnumerable<DisplayModule> list, Rectangle rect)
+		{
+#if !DEBUG
+			var vessel = FlightGlobals.ActiveVessel;
 
-            
-        }
-        */
+			if (vessel == null)
+			{
+				_dev.ClearLcd("Waiting for flight...");
+				return;
+			}
+			var target = FlightGlobals.fetch.VesselTarget;
+#endif
+			foreach (var mod in list)
+			{
+				if (!mod.IsActive)
+				{
+					continue;
+				}
 
-        public void ButtonUp(Device dev)
-        {
-            if (!active)
-                return;
+#if !DEBUG
+				if (!mod.IsTargetTypeModule)
+				{
+					mod.SetOrbit(vessel.orbit, vessel.GetName());
+					mod.Render(rect);
+				}
+				else
+				{
+					if (target != null)
+					{
+						mod.SetOrbit(target.GetOrbit(), target.GetName());
+					}
+					else
+					{
+						mod.SetOrbit(null, null);
+					}
+#endif
+				mod.Render(rect);
+#if !DEBUG
+				}
+#endif
+			}
+		}
 
-            CycleModules(ref top_modules, ref bottom_modules, ref active_top_mod, ref active_bottom_mod, false);  
-        }
+		public override void Render(Rectangle rect)
+		{
+			if (!IsActive)
+			{
+				return;
+			}
 
-        public void ButtonDown(Device dev)
-        {
-            if (!active)
-                return;
-            if (dev.is_color)
-            {
-                CycleModules(ref bottom_modules, ref top_modules, ref active_bottom_mod, ref active_top_mod, false);
-            }
-        }
-       
-        public override void TestRender(Rectangle rect)
-        {
-            if (!active)
-                return;
+			if (rect.Width == 0 || rect.Height == 0)
+			{
+				rect = _dev.GetRect();
+			}
 
-            if (rect.Width == 0 || rect.Height == 0)
-            {
-                rect = dev.GetRect();
-            }
+			Clear();
 
-            Clear();
+			Rectangle vrect;
+			if (_activeTopMod.GetType() == _activeBottomMod.GetType())
+			{
+				vrect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height / 2);
+			}
+			else if (_activeTopMod is OrbitInfo)
+			{
+				vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.4f));
+			}
+			else
+			{
+				vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.6f));
+			}
+			var trect = new Rectangle(rect.X, rect.Y + vrect.Height, rect.Width, rect.Height - vrect.Height);
 
-            Rectangle vrect;
-            if (active_top_mod.GetType() == active_bottom_mod.GetType())
-            {
-                vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height / 2));
-            }
-            else if (active_top_mod is OrbitInfo)
-            {
-                vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.4f));
-            }
-            else
-            {
-                vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.6f));
-            }
-            //Rectangle vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.4f));
-            Rectangle trect = new Rectangle(rect.X, (int)(rect.Y + vrect.Height), rect.Width, (int)(rect.Height - vrect.Height));
-            Rectangle frect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
-
-            //Rectangle vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.4f));
-            //Rectangle trect = new Rectangle(rect.X, vrect.Height, rect.Width, (int)(rect.Height - vrect.Height));
-            //Rectangle frect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
-
-            TestRenderModules(top_modules, vrect);
-            TestRenderModules(bottom_modules, trect);
-
-            //orbitinfo.TestRender(vrect);
-            //target_orbitinfo.TestRender(vrect);
-            //orbitgraph.TestRender(trect);
-            //target_orbitgraph.TestRender(trect);
-        }
-
-        private void TestRenderModules(List<DisplayModule> list, Rectangle rect)
-        {
-            
-            foreach (DisplayModule mod in list)
-            {
-                if (mod.active)
-                {
-                    if (mod.is_target_type_module)
-                    {
-                        mod.TestRender(rect);
-                    }
-                    else
-                    {
-                        mod.TestRender(rect);
-                    }
-                }
-            }
-        }
-
-        private void RenderModules(List<DisplayModule> list, Rectangle rect)
-        {
-            Vessel vessel = FlightGlobals.ActiveVessel;
-
-            if (vessel == null)
-            {
-                dev.ClearLCD("Waiting for flight...");
-                return;
-            }
-            ITargetable target;
-            target = FlightGlobals.fetch.VesselTarget;
-
-            foreach (DisplayModule mod in list)
-            {
-                if (mod.active)
-                {
-                    if (!mod.is_target_type_module)
-                    {
-                        mod.SetOrbit(vessel.orbit, vessel.GetName());
-                        mod.Render(rect);
-                    }
-                    else
-                    {
-                        if (target != null)
-                        {
-                            mod.SetOrbit(target.GetOrbit(), target.GetName());
-                        }
-                        else
-                        {
-                            mod.SetOrbit(null, null);
-                        }
-                        mod.Render(rect);
-                    }
-                }
-            }
-
-        }
-
-        public override void Render(Rectangle rect)
-        {
-            if (!active)
-                return;
-
-
-            if (rect.Width == 0 || rect.Height == 0)
-            {
-                rect = dev.GetRect();
-            }
-
-            Clear();
-
-            Rectangle vrect;
-            if (active_top_mod.GetType() == active_bottom_mod.GetType())
-            {
-                vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height / 2));
-            }
-            else if (active_top_mod is OrbitInfo)
-            {
-                vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.4f));
-            }
-            else
-            {
-                vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.6f));
-            }
-            //Rectangle vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.4f));
-            Rectangle trect = new Rectangle(rect.X, (int)(rect.Y + vrect.Height), rect.Width, (int)(rect.Height - vrect.Height));
-            Rectangle frect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
-
-
-
-            RenderModules(top_modules, vrect);
-            RenderModules(bottom_modules, trect);
-            
-        }
-
-    }
+			RenderModules(_topModules, vrect);
+			RenderModules(_bottomModules, trect);
+		}
+		#endregion
+	}
 }
