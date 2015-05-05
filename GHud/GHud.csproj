@@ -51,19 +51,19 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AtmosphereGeometry.cs" />
-    <Compile Include="BodyGeometry.cs" />
-    <Compile Include="Device.cs" />
-    <Compile Include="DeviceBw.cs" />
-    <Compile Include="DeviceQvga.cs" />
-    <Compile Include="DisplayModule.cs" />
-    <Compile Include="OrbitGeometry.cs" />
+    <Compile Include="DataStructures\AtmosphereGeometry.cs" />
+    <Compile Include="DataStructures\BodyGeometry.cs" />
+    <Compile Include="Devices\Device.cs" />
+    <Compile Include="Devices\DeviceBw.cs" />
+    <Compile Include="Devices\DeviceQvga.cs" />
+    <Compile Include="Modules\DisplayModule.cs" />
+    <Compile Include="DataStructures\OrbitGeometry.cs" />
     <Compile Include="NativeMethods.cs" />
-    <Compile Include="MonoBehavior.cs" />
-    <Compile Include="Debug.cs" />
+    <Compile Include="Debug\MonoBehavior.cs" />
+    <Compile Include="Debug\Debug.cs" />
     <Compile Include="GHud.cs" />
-    <Compile Include="OrbitGraph.cs" />
-    <Compile Include="OrbitInfo.cs" />
+    <Compile Include="Modules\OrbitGraph.cs" />
+    <Compile Include="Modules\OrbitInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -71,8 +71,8 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Util.cs" />
-    <Compile Include="VesselGeometry.cs" />
-    <Compile Include="VesselInfo.cs" />
+    <Compile Include="DataStructures\VesselGeometry.cs" />
+    <Compile Include="Modules\VesselInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -84,6 +84,7 @@
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

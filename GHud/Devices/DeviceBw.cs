@@ -1,7 +1,7 @@
 using System.Drawing;
 using System.Drawing.Text;
 
-namespace GHud
+namespace GHud.Devices
 {
 	internal class DeviceBw : Device
 	{

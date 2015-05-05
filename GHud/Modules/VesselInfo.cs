@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using GHud.Devices;
 
-namespace GHud
+namespace GHud.Modules
 {
 	// This is a hybrid displaymodule.  It contains both and orbitinfo and orbit graph displaymodule and splits them on the screen.
 	internal class VesselInfo : DisplayModule
@@ -203,6 +204,7 @@ namespace GHud
 			}
 			var target = FlightGlobals.fetch.VesselTarget;
 #endif
+			// ReSharper disable once LoopCanBePartlyConvertedToQuery
 			foreach (var mod in list)
 			{
 				if (!mod.IsActive)

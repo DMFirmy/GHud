@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 
 internal class NativeMethods
 {
+	#region Delegates
 	//Button callback is unstable.  Use polling function instead.
 	public delegate void BtnCallback(int deviceType, int dwButtons);
 
@@ -18,7 +19,9 @@ internal class NativeMethods
 	///     if you have more than one connection to the library to determine which configuration to open.
 	/// </param>
 	public delegate void CfgCallback(int connection);
+	#endregion
 
+	#region Constants
 	// Windows Constants
 	public const uint ERROR_SUCCESS = 0;
 	// LCD Constants
@@ -41,7 +44,9 @@ internal class NativeMethods
 	public const uint LGLCD_BUTTON_UP = 0x1000; //Decimal 4096
 	public const uint LGLCD_BUTTON_DOWN = 0x2000; //Decimal 8192
 	public const uint LGLCD_BUTTON_MENU = 0x4000; //Decimal 16384
+	#endregion
 
+	#region Methods
 	/// <summary>
 	///     Initialize LCD Library.
 	/// </summary>
@@ -73,10 +78,7 @@ internal class NativeMethods
 	/// <returns>Connection on success.  LGLCD_INVALID_CONNECTION on failure.</returns>
 	/// <remarks>Use only after LcdInit.  Multiple connections are allowed.</remarks>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdConnectA")]
-	public static extern int LcdConnect(
-		[MarshalAs(UnmanagedType.LPWStr)] string appFriendlyName,
-		int isPersistent,
-		int isAutostartable);
+	public static extern int LcdConnect([MarshalAs(UnmanagedType.LPWStr)] string appFriendlyName, int isPersistent, int isAutostartable);
 
 	/// <summary>
 	///     Makes a connection to the LCD Library.  Use connection to open a device.
@@ -94,10 +96,7 @@ internal class NativeMethods
 	///     returned.
 	/// </remarks>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdConnectExA")]
-	public static extern int LcdConnectEx(
-		[MarshalAs(UnmanagedType.LPWStr)] string appFriendlyName,
-		int isPersistent,
-		int isAutostartable);
+	public static extern int LcdConnectEx([MarshalAs(UnmanagedType.LPWStr)] string appFriendlyName, int isPersistent, int isAutostartable);
 
 	/// <summary>
 	///     Disconnects from the LCD Library.
@@ -106,8 +105,7 @@ internal class NativeMethods
 	/// <returns>ERROR_SUCCESS on success, standard Windows error otherwise.</returns>
 	/// <remarks>Each LcdConnect requires it's own LcdDisconnect.  Issue before LcdDeInit.</remarks>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdDisconnect")]
-	public static extern uint LcdDisconnect(
-		int connection);
+	public static extern uint LcdDisconnect(int connection);
 
 	/// <summary>
 	///     Opens an LCD device for writing.
@@ -117,9 +115,7 @@ internal class NativeMethods
 	/// <returns>Device number if successful, LGLCD_INVALID_DEVICE otherwise.</returns>
 	/// <remarks>Only one device can be open per connection.</remarks>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdOpenByType")]
-	public static extern int LcdOpenByType(
-		int connection,
-		int deviceType);
+	public static extern int LcdOpenByType(int connection, int deviceType);
 
 	/// <summary>
 	///     Close an LCD device.
@@ -128,8 +124,7 @@ internal class NativeMethods
 	/// <returns>ERROR_SUCCESS on success, standard Windows error otherwise.</returns>
 	/// <remarks>Issue before LcdDisconnect.</remarks>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdClose")]
-	public static extern uint LcdClose(
-		int device);
+	public static extern uint LcdClose(int device);
 
 	/// <summary>
 	///     Updates LCD device with an HBITMAP.
@@ -153,10 +148,7 @@ internal class NativeMethods
 	///     LCD.Dispose();
 	/// </example>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdUpdateBitmap")]
-	public static extern uint LcdUpdateBitmap(
-		int device,
-		IntPtr HBITMAP,
-		int format);
+	public static extern uint LcdUpdateBitmap(int device, IntPtr HBITMAP, int format);
 
 	/// <summary>
 	///     Brings the device to the forground on the LCD.
@@ -166,9 +158,7 @@ internal class NativeMethods
 	/// <returns>ERROR_SUCCESS on success, standard Windows error otherwise.</returns>
 	/// <remarks>Does nothing until after the first LcdUpdateBitmap has been sent.</remarks>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdSetAsLCDForegroundApp")]
-	public static extern uint LcdSetAsLCDForegroundApp(
-		int device,
-		int foregroundYesNoFlag);
+	public static extern uint LcdSetAsLCDForegroundApp(int device, int foregroundYesNoFlag);
 
 	/// <summary>
 	///     Reads the status of the soft buttons at the time the function is called.
@@ -180,8 +170,7 @@ internal class NativeMethods
 	///     if ((buttons & DMcLgLCD.LCD_BUTTON_1) == DMcLgLCD.LCD_BUTTON_1)
 	/// </example>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdReadSoftButtons")]
-	public static extern uint LcdReadSoftButtons(
-		int device);
+	public static extern uint LcdReadSoftButtons(int device);
 
 	/// <summary>
 	///     Sets the configuration callback function.
@@ -189,10 +178,9 @@ internal class NativeMethods
 	/// <param name="configurationCallback">Name of your callback function.</param>
 	/// <returns>ERROR_SUCCESS on success, standard Windows error otherwise.</returns>
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdSetConfigCallback")]
-	public static extern uint LcdSetConfigCallback(
-		CfgCallback configurationCallback);
+	public static extern uint LcdSetConfigCallback(CfgCallback configurationCallback);
 
 	[DllImport("DMcLgLCD.dll", EntryPoint = "LcdSetButtonCallback")]
-	public static extern uint LcdSetButtonCallback(
-		BtnCallback softKeyCallback);
+	public static extern uint LcdSetButtonCallback(BtnCallback softKeyCallback);
+	#endregion
 }

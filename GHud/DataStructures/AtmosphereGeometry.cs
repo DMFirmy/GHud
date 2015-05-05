@@ -1,11 +1,12 @@
-namespace GHud
+namespace GHud.DataStructures
 {
-	internal struct BodyGeometry
+	internal struct AtmosphereGeometry
 	{
 		public double Dia { get; set; }
 		public double CenterX { get; set; }
 		public double CenterY { get; set; }
-		public double XOffset { get; set; }
 		public double X { get; set; }
+		public double Reduction { get; set; }
+		public double PosReduction { get; set; }
 	}
 }

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using GHud.Devices;
 
-namespace GHud
+namespace GHud.Modules
 {
 	internal class OrbitInfo : DisplayModule
 	{

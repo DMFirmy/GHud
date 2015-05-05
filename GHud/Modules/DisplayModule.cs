@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using GHud.Devices;
 
-namespace GHud
+namespace GHud.Modules
 {
 	public abstract class DisplayModule : IDisposable
 	{

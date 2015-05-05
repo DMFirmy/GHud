@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Text;
 using System.Linq;
+using GHud.Modules;
 
-namespace GHud
+namespace GHud.Devices
 {
 	// Device base class
 	public abstract class Device : IDisposable

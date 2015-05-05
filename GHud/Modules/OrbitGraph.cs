@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using GHud.DataStructures;
+using GHud.Devices;
 
-namespace GHud
+namespace GHud.Modules
 {
 	// Display module which displays a rendering of the current orbit and its parent body.
 	internal class OrbitGraph : DisplayModule

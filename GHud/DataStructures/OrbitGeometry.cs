@@ -1,4 +1,4 @@
-﻿namespace GHud
+﻿namespace GHud.DataStructures
 {
 	internal struct OrbitGeometry
 	{

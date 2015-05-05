@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using GHud.Devices;
+using GHud.Modules;
 using Color = System.Drawing.Color;
 #if !DEBUG
 using UnityEngine;
