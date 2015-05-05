@@ -85,7 +85,7 @@ namespace GHud.Modules
 		}
 		#endregion
 
-		#region Methods
+		#region Public Methods
 		public void Dispose()
 		{
 			if (_disposed)
@@ -129,15 +129,6 @@ namespace GHud.Modules
 			_orbitObjectName = objName;
 		}
 
-		protected void ResetBackRectBrush()
-		{
-			if (_backRectBrush != null)
-			{
-				_backRectBrush.Dispose();
-			}
-			_backRectBrush = new LinearGradientBrush(new PointF(0.5F, 0.0F), new PointF(0.5F, 1.0F), _backRectC1, _backRectC2);
-		}
-
 		public void ModuleMsg(string msg, Rectangle rect, bool invert = false)
 		{
 			if (!IsActive)
@@ -149,15 +140,6 @@ namespace GHud.Modules
 			{
 				_dev.RenderSysString(msg, invert, rect);
 			}
-		}
-
-		protected virtual void Clear()
-		{
-			if (!IsActive)
-			{
-				return;
-			}
-			_dev.Graphics.FillRectangle(_dev.ClearBrush, new Rectangle(_xOff, _yOff, _width, _height));
 		}
 
 		public void Activate()
@@ -178,57 +160,25 @@ namespace GHud.Modules
 		{
 			_dev.RenderSysString(_name, true, new Rectangle(0, 0, 0, 0));
 		}
+		#endregion
 
-		// Calculates a set of column offset info based on measurements of the font and the display geometry
-		private void CalcColumns(Font font)
+		#region Protected Methods
+		protected void ResetBackRectBrush()
 		{
-			if (!IsActive || font == null)
+			if (_backRectBrush != null)
+			{
+				_backRectBrush.Dispose();
+			}
+			_backRectBrush = new LinearGradientBrush(new PointF(0.5F, 0.0F), new PointF(0.5F, 1.0F), _backRectC1, _backRectC2);
+		}
+
+		protected virtual void Clear()
+		{
+			if (!IsActive)
 			{
 				return;
 			}
-
-			var maxSufBounds = _dev.Graphics.MeasureString(BigSuf, font, new Point(0, 0), _fmtDefault);
-			_maxSuffixWidth = (int)(maxSufBounds.Width + 1);
-
-			var maxLabBounds = _dev.Graphics.MeasureString(BigLab, font, new Point(0, 0), _fmtDefault);
-			_maxLabWidth = (int)(maxLabBounds.Width);
-
-			var smallCol = _maxLabWidth;
-			var largeCol = (_width - (smallCol * 2)) / 2;
-
-			_lineOffset = (float)Math.Round(font.GetHeight());
-
-			if (_twoColumnLabeledOffsets == null)
-			{
-				_twoColumnLabeledOffsets = new int[5];
-			}
-			_twoColumnLabeledOffsets[0] = _xOff + 0;
-			_twoColumnLabeledOffsets[1] = _xOff + smallCol;
-			_twoColumnLabeledOffsets[2] = _twoColumnLabeledOffsets[1] + largeCol;
-			_twoColumnLabeledOffsets[3] = _twoColumnLabeledOffsets[2] + smallCol;
-			_twoColumnLabeledOffsets[4] = _xOff + _width;
-
-			if (_twoColumnOffsets == null)
-			{
-				_twoColumnOffsets = new int[3];
-			}
-			_twoColumnOffsets[0] = _xOff + 0;
-			_twoColumnOffsets[1] = _xOff + _width / 2;
-			_twoColumnOffsets[2] = _xOff + _width;
-		}
-
-		private void FillRectGradient(Rectangle rect, float pct1, Color c1, Color c2, float pct2, Color c3, Color c4)
-		{
-			var rect1 = new Rectangle(rect.X, rect.Y, rect.Width, (int)Math.Ceiling(rect.Height * pct1));
-			var rect2 = new Rectangle(rect.X, rect.Y + rect1.Height - 1, rect.Width, (int)Math.Ceiling(rect.Height * pct2) + 1);
-
-			var tmpbrush = new LinearGradientBrush(rect2, c3, c4, LinearGradientMode.Vertical);
-			_dev.Graphics.FillRectangle(tmpbrush, rect2);
-			tmpbrush.Dispose();
-
-			tmpbrush = new LinearGradientBrush(rect1, c1, c2, LinearGradientMode.Vertical);
-			_dev.Graphics.FillRectangle(tmpbrush, rect1);
-			tmpbrush.Dispose();
+			_dev.Graphics.FillRectangle(_dev.ClearBrush, new Rectangle(_xOff, _yOff, _width, _height));
 		}
 
 		protected void RenderString(string str, int line, int column, ref int[] cOffsets, StringFormat fmt,
@@ -291,6 +241,60 @@ namespace GHud.Modules
 				_xOff = 0;
 				_yOff = 0;
 			}
+		}
+		#endregion
+
+		#region Private Methods
+		// Calculates a set of column offset info based on measurements of the font and the display geometry
+		private void CalcColumns(Font font)
+		{
+			if (!IsActive || font == null)
+			{
+				return;
+			}
+
+			var maxSufBounds = _dev.Graphics.MeasureString(BigSuf, font, new Point(0, 0), _fmtDefault);
+			_maxSuffixWidth = (int)(maxSufBounds.Width + 1);
+
+			var maxLabBounds = _dev.Graphics.MeasureString(BigLab, font, new Point(0, 0), _fmtDefault);
+			_maxLabWidth = (int)(maxLabBounds.Width);
+
+			var smallCol = _maxLabWidth;
+			var largeCol = (_width - (smallCol * 2)) / 2;
+
+			_lineOffset = (float)Math.Round(font.GetHeight());
+
+			if (_twoColumnLabeledOffsets == null)
+			{
+				_twoColumnLabeledOffsets = new int[5];
+			}
+			_twoColumnLabeledOffsets[0] = _xOff + 0;
+			_twoColumnLabeledOffsets[1] = _xOff + smallCol;
+			_twoColumnLabeledOffsets[2] = _twoColumnLabeledOffsets[1] + largeCol;
+			_twoColumnLabeledOffsets[3] = _twoColumnLabeledOffsets[2] + smallCol;
+			_twoColumnLabeledOffsets[4] = _xOff + _width;
+
+			if (_twoColumnOffsets == null)
+			{
+				_twoColumnOffsets = new int[3];
+			}
+			_twoColumnOffsets[0] = _xOff + 0;
+			_twoColumnOffsets[1] = _xOff + _width / 2;
+			_twoColumnOffsets[2] = _xOff + _width;
+		}
+
+		private void FillRectGradient(Rectangle rect, float pct1, Color c1, Color c2, float pct2, Color c3, Color c4)
+		{
+			var rect1 = new Rectangle(rect.X, rect.Y, rect.Width, (int)Math.Ceiling(rect.Height * pct1));
+			var rect2 = new Rectangle(rect.X, rect.Y + rect1.Height - 1, rect.Width, (int)Math.Ceiling(rect.Height * pct2) + 1);
+
+			var tmpbrush = new LinearGradientBrush(rect2, c3, c4, LinearGradientMode.Vertical);
+			_dev.Graphics.FillRectangle(tmpbrush, rect2);
+			tmpbrush.Dispose();
+
+			tmpbrush = new LinearGradientBrush(rect1, c1, c2, LinearGradientMode.Vertical);
+			_dev.Graphics.FillRectangle(tmpbrush, rect1);
+			tmpbrush.Dispose();
 		}
 		#endregion
 	}

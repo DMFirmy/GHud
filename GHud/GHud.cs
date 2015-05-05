@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GHud.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using GHud.Devices;
@@ -7,9 +8,13 @@ using Color = System.Drawing.Color;
 #if !DEBUG
 using UnityEngine;
 #endif
+// ReSharper disable UnusedMember.Global
 
 namespace GHud
 {
+	/// <summary>
+	///     This class handles interaction with the keyboard device and which <see cref="DisplayModule" /> instance is currently being displayed.
+	/// </summary>
 	[KSPAddon(KSPAddon.Startup.Instantly, true)]
 	public class GHud : MonoBehaviour
 	{
@@ -22,7 +27,10 @@ namespace GHud
 		private bool _lcdInitialized;
 		#endregion
 
-		#region Methods
+		#region Public Methods
+		/// <summary>
+		///     This function is called when the MonoBehaviour will be destroyed.
+		/// </summary>
 		public void OnDestroy()
 		{
 			foreach (var dev in _devices)
@@ -40,63 +48,9 @@ namespace GHud
 			_config = connection;
 		}
 
-		private static void ButtonUp(object sender, EventArgs e)
-		{
-		}
-
-		private static void ButtonDown(object sender, EventArgs e)
-		{
-		}
-
-		private static void ButtonLeft(object sender, EventArgs e)
-		{
-		}
-
-		private static void ButtonRight(object sender, EventArgs e)
-		{
-		}
-
-		private static void ButtonOk(object sender, EventArgs e)
-		{
-		}
-
-		private static void ButtonCancel(object sender, EventArgs e)
-		{
-		}
-
-		// Cycle through the existing modules
-		private static void ButtonMenu(object sender, EventArgs e)
-		{
-			var dev = sender as Device;
-			if (dev == null)
-			{
-				return;
-			}
-
-			var activate = false;
-			var activated = false;
-			foreach (var dmod in dev.Modules)
-			{
-				if (activate)
-				{
-					dmod.Activate();
-					activated = true;
-					break;
-				}
-				if (!dmod.IsActive)
-				{
-					continue;
-				}
-				activate = true;
-				dmod.Deactivate();
-			}
-
-			if (!activated)
-			{
-				dev.Modules[0].Activate();
-			}
-		}
-
+		/// <summary>
+		///     Awake is called when the script instance is being loaded.
+		/// </summary>
 		public void Awake()
 		{
 			if (_gHudMain != null)
@@ -184,18 +138,16 @@ namespace GHud
 		}
 
 		/// <summary>
-		///     This method gets called each frame to update the LCD display.
+		///     Update is called every frame, if the MonoBehaviour is enabled.
 		/// </summary>
 		public void Update()
 		{
 #if !DEBUG
 			var updateDelta = Time.time - _lastUpdate;
-
 			if (updateDelta < 0.2f)
 			{
 				return;
 			}
-			_lastUpdate = Time.time;
 
 			var vessel = FlightGlobals.ActiveVessel;
 			if (vessel == null)
@@ -212,47 +164,106 @@ namespace GHud
 			{
 				dev.ClearLcd("");
 				dev.DoButtons();
-
-				foreach (var dmod in dev.Modules)
-				{
-#if !DEBUG
-	// TODO: This needs a rewrite.  All this crap should be done in the display classes.
-					var target = FlightGlobals.fetch.VesselTarget;
-					Orbit orbit = null;
-					var objName = "Unknown";
-
-					if (dmod.IsTargetTypeModule)
-					{
-						if (target == null)
-						{
-							dmod.ModuleMsg("No Target", new Rectangle(0, 0, 0, 0));
-						}
-						else
-						{
-							orbit = target.GetOrbit();
-							objName = target.GetName();
-						}
-					}
-					else
-					{
-						orbit = vessel.orbit;
-						objName = vessel.GetName();
-					}
-
-					if (orbit != null)
-					{
-						dmod.SetOrbit(orbit, objName);
-					}
-#endif
-					dmod.Render(new Rectangle(0, 0, 0, 0));
-				}
-
+				dev.Modules.Render(vessel);
 				dev.DisplayFrame();
 			}
 
 #if !DEBUG
 			_lastUpdate = Time.time;
 #endif
+		}
+		#endregion
+
+		#region Private Methods
+		/// <summary>
+		///     Handles the press of the "Up" button on the keyboard.
+		/// </summary>
+		/// <param name="sender">The <see cref="Device" /> object that had the button pressed.</param>
+		/// <param name="e">Any <see cref="EventArgs" /> that are associated with this button press event.</param>
+		private static void ButtonUp(object sender, EventArgs e)
+		{
+		}
+
+		/// <summary>
+		///     Handles the press of the "Down" button on the keyboard.
+		/// </summary>
+		/// <param name="sender">The <see cref="Device" /> object that had the button pressed.</param>
+		/// <param name="e">Any <see cref="EventArgs" /> that are associated with this button press event.</param>
+		private static void ButtonDown(object sender, EventArgs e)
+		{
+		}
+
+		/// <summary>
+		///     Handles the press of the "Left" button on the keyboard.
+		/// </summary>
+		/// <param name="sender">The <see cref="Device" /> object that had the button pressed.</param>
+		/// <param name="e">Any <see cref="EventArgs" /> that are associated with this button press event.</param>
+		private static void ButtonLeft(object sender, EventArgs e)
+		{
+		}
+
+		/// <summary>
+		///     Handles the press of the "Right" button on the keyboard.
+		/// </summary>
+		/// <param name="sender">The <see cref="Device" /> object that had the button pressed.</param>
+		/// <param name="e">Any <see cref="EventArgs" /> that are associated with this button press event.</param>
+		private static void ButtonRight(object sender, EventArgs e)
+		{
+		}
+
+		/// <summary>
+		///     Handles the press of the "Ok" button on the keyboard.
+		/// </summary>
+		/// <param name="sender">The <see cref="Device" /> object that had the button pressed.</param>
+		/// <param name="e">Any <see cref="EventArgs" /> that are associated with this button press event.</param>
+		private static void ButtonOk(object sender, EventArgs e)
+		{
+		}
+
+		/// <summary>
+		///     Handles the press of the "Cancel" button on the keyboard.
+		/// </summary>
+		/// <param name="sender">The <see cref="Device" /> object that had the button pressed.</param>
+		/// <param name="e">Any <see cref="EventArgs" /> that are associated with this button press event.</param>
+		private static void ButtonCancel(object sender, EventArgs e)
+		{
+		}
+
+		/// <summary>
+		///     Handles the press of the "Menu" button on the keyboard.
+		/// </summary>
+		/// <param name="sender">The <see cref="Device" /> object that had the button pressed.</param>
+		/// <param name="e">Any <see cref="EventArgs" /> that are associated with this button press event.</param>
+		private static void ButtonMenu(object sender, EventArgs e)
+		{
+			var dev = sender as Device;
+			if (dev == null)
+			{
+				return;
+			}
+
+			var activate = false;
+			var activated = false;
+			foreach (var dmod in dev.Modules)
+			{
+				if (activate)
+				{
+					dmod.Activate();
+					activated = true;
+					break;
+				}
+				if (!dmod.IsActive)
+				{
+					continue;
+				}
+				activate = true;
+				dmod.Deactivate();
+			}
+
+			if (!activated)
+			{
+				dev.Modules[0].Activate();
+			}
 		}
 		#endregion
 	}

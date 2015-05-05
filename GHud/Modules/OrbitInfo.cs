@@ -40,7 +40,28 @@ namespace GHud.Modules
 		protected int _count;
 		#endregion
 
-		#region Methods
+		#region Public Methods
+		public override void Render(Rectangle rect)
+		{
+			if (!IsActive)
+			{
+				return;
+			}
+
+#if !DEBUG
+			if (_orbit == null)
+			{
+				ModuleMsg(IsTargetTypeModule ? "No Target" : "Null Orbit", rect);
+				return;
+			}
+#endif
+
+			PrepData();
+			DoRender(rect);
+		}
+		#endregion
+
+		#region Private Methods
 		private void PrepData()
 		{
 #if DEBUG
@@ -191,25 +212,6 @@ namespace GHud.Modules
 			{
 				RenderString(_situationStr, line, 0, ref _twoColumnOffsets, _fmtLeft);
 			}
-		}
-
-		public override void Render(Rectangle rect)
-		{
-			if (!IsActive)
-			{
-				return;
-			}
-
-#if !DEBUG
-			if (_orbit == null)
-			{
-				ModuleMsg(IsTargetTypeModule ? "No Target" : "Null Orbit", rect);
-				return;
-			}
-#endif
-
-			PrepData();
-			DoRender(rect);
 		}
 		#endregion
 	}

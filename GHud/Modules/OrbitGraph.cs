@@ -58,7 +58,52 @@ namespace GHud.Modules
 		}
 		#endregion
 
-		#region Methods
+		#region Fields
+		private readonly Pen _orbitPen;
+		private double _apR;
+		private double _peR;
+		private double _apA;
+		private double _peA;
+		private double _semiMajorAxis;
+		private double _semiMinorAxis;
+		private double _eccentricity;
+		private double _atmosDia;
+		private double _dia;
+		private Rectangle _ellipticalRect;
+		private Color _bodyColor;
+		private double _a;
+		private double _r;
+		private readonly Dictionary<string, Color> _bodyColors;
+		private readonly String _monicer;
+		#endregion
+
+		#region Public Methods
+		public override void Render(Rectangle rect)
+		{
+			if (!IsActive)
+			{
+				return;
+			}
+
+			// Render in the specified rectangle.  If the rect is 0, then use the whole device geometry
+			CalculateRenderDimensions(rect);
+#if !DEBUG
+			if (_orbit == null)
+			{
+				ModuleMsg(IsTargetTypeModule ? "No Target" : "Null Orbit", rect);
+				return;
+			}
+#endif
+#if DEBUG
+			PrepData();
+#else
+			PrepData(_orbit);
+#endif
+			DoRender(rect);
+		}
+		#endregion
+
+		#region Private Methods
 		// Gather and prepare data needed for rendering this frame.
 #if DEBUG
 		private void PrepData()
@@ -92,15 +137,15 @@ namespace GHud.Modules
 			_eccentricity = (_apR - _peR) / (_apR + _peR);
 			_semiMinorAxis = _semiMajorAxis * (1 - _eccentricity);
 #else
-	// Orbit info
+			// Orbit info
 			_apR = orbit.ApR;
 			_peR = orbit.PeR;
 			_apA = orbit.ApA;
 			_peA = orbit.PeA;
 
 			// Calc the diameter of the reference body and the diameter of its atmosphere
-			_dia = orbit.referenceBody.Radius*2;
-			_atmosDia = _dia + (orbit.referenceBody.atmosphereDepth*2);
+			_dia = orbit.referenceBody.Radius * 2;
+			_atmosDia = _dia + (orbit.referenceBody.atmosphereDepth * 2);
 
 			_semiMajorAxis = orbit.semiMajorAxis;
 			_semiMinorAxis = orbit.semiMinorAxis;
@@ -222,7 +267,7 @@ namespace GHud.Modules
 		{
 			var orbPeSuffix = string.Empty;
 			RenderString("p:" + Util.xMuMech_ToSI(_peA, ref orbPeSuffix) + orbPeSuffix, line, 1, ref _twoColumnOffsets,
-					_fmtRight, FontStyle.Regular, false, fontSize);
+				_fmtRight, FontStyle.Regular, false, fontSize);
 		}
 
 		private bool IsLeavingSoi()
@@ -272,10 +317,10 @@ namespace GHud.Modules
 			geometry.CenterY = (orbitGeometry.Y + (orbitGeometry.Height / 2)) - (geometry.Dia / 2);
 			geometry.XOffset = (_semiMajorAxis - _peR) * orbitGeometry.ScaleFactor;
 			geometry.X = geometry.CenterX + geometry.XOffset;
-			
+
 			return geometry;
 		}
-		
+
 		private VesselGeometry CalculateVesselGeometry(OrbitGeometry orbitGeometry, BodyGeometry bodyGeometry)
 		{
 			// Calculate the drawing location of the vessel on the ellipse.
@@ -306,49 +351,6 @@ namespace GHud.Modules
 
 			return geometry;
 		}
-		
-		public override void Render(Rectangle rect)
-		{
-			if (!IsActive)
-			{
-				return;
-			}
-
-			// Render in the specified rectangle.  If the rect is 0, then use the whole device geometry
-			CalculateRenderDimensions(rect);
-#if !DEBUG
-			if (_orbit == null)
-			{
-				ModuleMsg(IsTargetTypeModule ? "No Target" : "Null Orbit", rect);
-				return;
-			}
-#endif
-#if DEBUG
-			PrepData();
-#else
-			PrepData(_orbit);
-#endif
-			DoRender(rect);
-		}
-		#endregion
-
-		#region Fields
-		private readonly Pen _orbitPen;
-		private double _apR;
-		private double _peR;
-		private double _apA;
-		private double _peA;
-		private double _semiMajorAxis;
-		private double _semiMinorAxis;
-		private double _eccentricity;
-		private double _atmosDia;
-		private double _dia;
-		private Rectangle _ellipticalRect;
-		private Color _bodyColor;
-		private double _a;
-		private double _r;
-		private readonly Dictionary<string, Color> _bodyColors;
-		private readonly String _monicer;
 		#endregion
 	}
 }

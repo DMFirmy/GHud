@@ -56,6 +56,7 @@
     <Compile Include="Devices\Device.cs" />
     <Compile Include="Devices\DeviceBw.cs" />
     <Compile Include="Devices\DeviceQvga.cs" />
+    <Compile Include="Extensions\IEnumerableExtensions.cs" />
     <Compile Include="Modules\DisplayModule.cs" />
     <Compile Include="DataStructures\OrbitGeometry.cs" />
     <Compile Include="NativeMethods.cs" />
