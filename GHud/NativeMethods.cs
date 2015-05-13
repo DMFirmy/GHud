@@ -8,7 +8,12 @@ using System.Runtime.InteropServices;
 internal class NativeMethods
 {
 	#region Delegates
-	//Button callback is unstable.  Use polling function instead.
+	// NOTE: Button callback is unstable. Use polling function instead.
+	/// <summary>
+	/// This is the callback for a button click.
+	/// </summary>
+	/// <param name="deviceType"></param>
+	/// <param name="dwButtons"></param>
 	public delegate void BtnCallback(int deviceType, int dwButtons);
 
 	/// <summary>
@@ -46,7 +51,7 @@ internal class NativeMethods
 	public const uint LGLCD_BUTTON_MENU = 0x4000; //Decimal 16384
 	#endregion
 
-	#region Methods
+	#region Public Methods
 	/// <summary>
 	///     Initialize LCD Library.
 	/// </summary>

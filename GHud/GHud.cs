@@ -1,7 +1,7 @@
-﻿using GHud.Extensions;
+﻿using System.Linq;
+using GHud.Extensions;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using GHud.Devices;
 using GHud.Modules;
 using Color = System.Drawing.Color;
@@ -29,22 +29,12 @@ namespace GHud
 
 		#region Public Methods
 		/// <summary>
-		///     This function is called when the MonoBehaviour will be destroyed.
+		/// This is the config callback for the <see cref="NativeMethods.LcdSetConfigCallback"/> method.
 		/// </summary>
-		public void OnDestroy()
-		{
-			foreach (var dev in _devices)
-			{
-				dev.Dispose();
-			}
-			if (_lcdInitialized)
-			{
-				NativeMethods.LcdDeInit();
-			}
-		}
-
+		/// <param name="connection">The connection that is issuing the callback.</param>
 		public void CfgCallback(int connection)
 		{
+			// NOTE: This method seems to be unused.
 			_config = connection;
 		}
 
@@ -106,23 +96,25 @@ namespace GHud
 			{
 				_devices.Add(device);
 
-				var vesselInfo = new VesselInfo(device);
-				vesselInfo.Activate();
-				device.Modules.Add(vesselInfo);
-
+				DisplayModule module;
+				module = new VesselInfo(device);
+				device.Modules.Add(module);
+				module.Activate();
+				
 				var vessleGraphColor = Color.Yellow;
-				var vessleGraph = new OrbitGraph(device, vessleGraphColor, vesselMonicer);
-				device.Modules.Add(vessleGraph);
+				module = new OrbitGraph(device, vessleGraphColor, vesselMonicer);
+				device.Modules.Add(module);
 
 				var targetGraphColor = Color.LightBlue;
-				var targetGraph = new OrbitGraph(device, targetGraphColor, targetMonicer)
+				module = new OrbitGraph(device, targetGraphColor, targetMonicer)
 				{
 					IsTargetTypeModule = true
 				};
-				device.Modules.Add(targetGraph);
+				device.Modules.Add(module);
 			}
 			#endregion
 
+			#region Initiialize Devices
 			foreach (var dev in _devices)
 			{
 				dev.ButtonUp += ButtonUp;
@@ -135,6 +127,7 @@ namespace GHud
 
 				dev.DisplayFrame();
 			}
+			#endregion
 		}
 
 		/// <summary>
@@ -162,15 +155,29 @@ namespace GHud
 #endif
 			foreach (var dev in _devices)
 			{
-				dev.ClearLcd("");
+				dev.ClearLcd();
 				dev.DoButtons();
-				dev.Modules.Render(vessel);
+				dev.Modules.Render();
 				dev.DisplayFrame();
 			}
-
 #if !DEBUG
 			_lastUpdate = Time.time;
 #endif
+		}
+
+		/// <summary>
+		///     This function is called when the MonoBehaviour will be destroyed.
+		/// </summary>
+		public void OnDestroy()
+		{
+			foreach (var dev in _devices)
+			{
+				dev.Dispose();
+			}
+			if (_lcdInitialized)
+			{
+				NativeMethods.LcdDeInit();
+			}
 		}
 		#endregion
 

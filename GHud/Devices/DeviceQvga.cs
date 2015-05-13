@@ -15,8 +15,8 @@ namespace GHud.Devices
 			_fontPt = 14.0F;
 			_renderHint = TextRenderingHint.AntiAliasGridFit;
 			_clearColor = Color.Black;
-			_defaultTxtBrush = Brushes.White;
 			_clearBrush = Brushes.Black;
+			_defaultTxtBrush = Brushes.White;
 			_invertedClearBrush = Brushes.White;
 			_invertedTxtBrush = Brushes.Black;
 			_defaultPen = Pens.White;

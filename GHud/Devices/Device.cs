@@ -214,7 +214,7 @@ namespace GHud.Devices
 		}
 
 		// Poorly named.  This simply clears the bitmap that will eventually be written to the LCD
-		public void ClearLcd(string msg)
+		public void ClearLcd(string msg = "")
 		{
 			if (_graphics == null)
 			{
@@ -242,30 +242,6 @@ namespace GHud.Devices
 		public Rectangle GetRect()
 		{
 			return new Rectangle(0, 0, _width, _height);
-		}
-
-		protected void InitLcd()
-		{
-			_connection = NativeMethods.LcdConnectEx("GHud", 0, 0);
-			if (NativeMethods.LGLCD_INVALID_CONNECTION == _connection)
-			{
-				return;
-			}
-			_device = NativeMethods.LcdOpenByType(_connection, _deviceType);
-			if (NativeMethods.LGLCD_INVALID_DEVICE == _device)
-			{
-				return;
-			}
-
-			_lcd = new Bitmap(_width, _height);
-
-			_graphics = Graphics.FromImage(_lcd);
-
-			_graphics.TextRenderingHint = _renderHint;
-
-			ClearLcd("Waiting for Flight...");
-			NativeMethods.LcdSetAsLCDForegroundApp(_device, NativeMethods.LGLCD_FORE_YES);
-			_valid = true;
 		}
 
 		public void DoButtons()
@@ -327,6 +303,30 @@ namespace GHud.Devices
 			}
 
 			_lastButtons = buttons;
+		}
+
+		protected void InitLcd()
+		{
+			_connection = NativeMethods.LcdConnectEx("GHud", 0, 0);
+			if (NativeMethods.LGLCD_INVALID_CONNECTION == _connection)
+			{
+				return;
+			}
+			_device = NativeMethods.LcdOpenByType(_connection, _deviceType);
+			if (NativeMethods.LGLCD_INVALID_DEVICE == _device)
+			{
+				return;
+			}
+
+			_lcd = new Bitmap(_width, _height);
+
+			_graphics = Graphics.FromImage(_lcd);
+
+			_graphics.TextRenderingHint = _renderHint;
+
+			ClearLcd("Initializing GHud...");
+			NativeMethods.LcdSetAsLCDForegroundApp(_device, NativeMethods.LGLCD_FORE_YES);
+			_valid = true;
 		}
 		#endregion
 	}

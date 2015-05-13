@@ -10,13 +10,21 @@ namespace GHud.Extensions
 	/// </summary>
 	public static class IEnumerableExtensions
 	{
+		#region Public Methods
 		/// <summary>
 		///		This method is used to render a collection of <see cref="DisplayModule"/> instances for the provided <see cref="Vessel"/>.
 		/// </summary>
 		/// <param name="modules">The <see cref="IEnumerable{DisplayModule}"/> being extended.</param>
 		/// <param name="vessel">The active <see cref="Vessel"/> instance.</param>
-		public static void Render(this IEnumerable<DisplayModule> modules, Vessel vessel)
+		public static void Render(this IEnumerable<DisplayModule> modules)
 		{
+#if !DEBUG
+			if (FlightGlobals.ActiveVessel == null)
+			{
+				return;
+			}
+			var vessel = FlightGlobals.ActiveVessel;
+#endif
 			foreach (var dmod in modules)
 			{
 #if !DEBUG
@@ -50,5 +58,6 @@ namespace GHud.Extensions
 				dmod.Render(new Rectangle(0, 0, 0, 0));
 			}
 		}
+		#endregion
 	}
 }
