@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using GHud.DataStructures;
 using GHud.Devices;
 
 namespace GHud.Modules
@@ -8,9 +9,9 @@ namespace GHud.Modules
 	public abstract class DisplayModule : IDisposable
 	{
 		#region Constructors
-		protected DisplayModule(Device argdev)
+		protected DisplayModule(Device dev)
 		{
-			_dev = argdev;
+			_dev = dev;
 			_name = "INVALID";
 			_selectable = false;
 			_isActive = false;
@@ -21,6 +22,8 @@ namespace GHud.Modules
 			_fontPt = _dev.FontSize;
 
 			_companionMod = null;
+
+			_orbit = new OrbitData();
 
 			_fmtLeft.Alignment = StringAlignment.Near;
 			_fmtLeft.LineAlignment = StringAlignment.Center;
@@ -57,11 +60,14 @@ namespace GHud.Modules
 		protected Color _backRectC1 = Color.Black;
 		protected Color _backRectC2 = Color.Black;
 		private LinearGradientBrush _backRectBrush;
-		protected Orbit _orbit;
+		//protected Orbit _orbit;
 		protected string _orbitObjectName;
 		protected int _moduleId;
 		protected DisplayModule _companionMod;
 		private bool _disposed;
+
+		protected OrbitData _orbit;
+
 		#endregion
 
 		#region Properties
@@ -123,9 +129,9 @@ namespace GHud.Modules
 		}
 
 		// ReSharper disable once VirtualMemberNeverOverriden.Global
-		public void SetOrbit(Orbit argorbit, string objName = "Unknown")
+		public void SetOrbit(OrbitData orbit, string objName = "Unknown")
 		{
-			_orbit = argorbit;
+			_orbit = orbit;
 			_orbitObjectName = objName;
 		}
 

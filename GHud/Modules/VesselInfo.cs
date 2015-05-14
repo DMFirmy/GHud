@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using GHud.DataStructures;
 using GHud.Devices;
 
 namespace GHud.Modules
@@ -199,7 +200,7 @@ namespace GHud.Modules
 
 			if (vessel == null)
 			{
-				_dev.ClearLcd("Waiting for flight...");
+				_dev.ClearLcdBitmap("Waiting for flight...");
 				return;
 			}
 			var target = FlightGlobals.fetch.VesselTarget;
@@ -213,26 +214,23 @@ namespace GHud.Modules
 				}
 
 #if !DEBUG
-				if (!mod.IsTargetTypeModule)
-				{
-					mod.SetOrbit(vessel.orbit, vessel.GetName());
-					mod.Render(rect);
-				}
-				else
+				if (mod.IsTargetTypeModule)
 				{
 					if (target != null)
 					{
-						mod.SetOrbit(target.GetOrbit(), target.GetName());
+						mod.SetOrbit(new OrbitData(target.GetOrbit()), target.GetName());
 					}
 					else
 					{
-						mod.SetOrbit(null, null);
+						mod.SetOrbit(new OrbitData(), null);
 					}
-#endif
-				mod.Render(rect);
-#if !DEBUG
+				}
+				else
+				{
+					mod.SetOrbit(new OrbitData(vessel.orbit), vessel.GetName());
 				}
 #endif
+				mod.Render(rect);
 			}
 		}
 
@@ -245,28 +243,28 @@ namespace GHud.Modules
 
 			if (rect.Width == 0 || rect.Height == 0)
 			{
-				rect = _dev.GetRect();
+				rect = _dev.RenderArea;
 			}
 
 			Clear();
 
-			Rectangle vrect;
+			Rectangle topRect;
 			if (_activeTopMod.GetType() == _activeBottomMod.GetType())
 			{
-				vrect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height / 2);
+				topRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height / 2);
 			}
 			else if (_activeTopMod is OrbitInfo)
 			{
-				vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.4f));
+				topRect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.4f));
 			}
 			else
 			{
-				vrect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.6f));
+				topRect = new Rectangle(rect.X, rect.Y, rect.Width, (int)(rect.Height * 0.6f));
 			}
-			var trect = new Rectangle(rect.X, rect.Y + vrect.Height, rect.Width, rect.Height - vrect.Height);
+			var bottomRect = new Rectangle(rect.X, rect.Y + topRect.Height, rect.Width, rect.Height - topRect.Height);
 
-			RenderModules(_topModules, vrect);
-			RenderModules(_bottomModules, trect);
+			RenderModules(_topModules, topRect);
+			RenderModules(_bottomModules, bottomRect);
 		}
 		#endregion
 	}

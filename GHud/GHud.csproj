@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="DataStructures\AtmosphereGeometry.cs" />
     <Compile Include="DataStructures\BodyGeometry.cs" />
+    <Compile Include="DataStructures\OrbitData.cs" />
     <Compile Include="Devices\Device.cs" />
     <Compile Include="Devices\DeviceBw.cs" />
     <Compile Include="Devices\DeviceQvga.cs" />

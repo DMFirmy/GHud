@@ -8,9 +8,10 @@ namespace GHud.Devices
 		#region Constructors
 		public DeviceQvga()
 		{
-			_valid = false;
+			_isInitialized = false;
 			_width = 320;
 			_height = 240;
+			_renderArea = new Rectangle(0, 0, _width, _height);
 			_isColor = true;
 			_fontPt = 14.0F;
 			_renderHint = TextRenderingHint.AntiAliasGridFit;

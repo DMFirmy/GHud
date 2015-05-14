@@ -17,9 +17,10 @@ namespace GHud.Devices
 		#region Constructors
 		protected Device()
 		{
-			_valid = false;
+			_isInitialized = false;
 			_width = 0;
 			_height = 0;
+			_renderArea = new Rectangle(0, 0, _width, _height);
 			_isColor = false;
 			_fontPt = 0.0F;
 			_renderHint = TextRenderingHint.SingleBitPerPixelGridFit;
@@ -29,12 +30,17 @@ namespace GHud.Devices
 			_defaultTxtBrush = Brushes.Black;
 			_invertedTxtBrush = Brushes.White;
 			_defaultPen = Pens.Black;
+
 			_useBackdrops = false;
 		}
 		#endregion
 
 		#region Fields
-		protected bool _valid;
+		/// <summary>
+		/// Whether or not this <see cref="Device"/> has been initialized.
+		/// </summary>
+		protected bool _isInitialized;
+
 		// Device physical parameters
 		protected int _width;
 		protected int _height;
@@ -42,6 +48,10 @@ namespace GHud.Devices
 		protected bool _useBackdrops;
 		// Rendering parameters
 		protected float _fontPt;
+
+		/// <summary>
+		/// The rendering mode for text associated with the <see cref="_graphics"/> object.
+		/// </summary>
 		protected TextRenderingHint _renderHint;
 		protected Color _clearColor;
 		protected Brush _clearBrush;
@@ -49,6 +59,7 @@ namespace GHud.Devices
 		protected Brush _defaultTxtBrush;
 		protected Brush _invertedTxtBrush;
 		protected Pen _defaultPen;
+
 		// Device LCD connection info
 		private int _connection = NativeMethods.LGLCD_INVALID_CONNECTION;
 		private int _device = NativeMethods.LGLCD_INVALID_DEVICE;
@@ -56,11 +67,21 @@ namespace GHud.Devices
 		private uint _lastButtons;
 		protected int _curFont = 1;
 		protected int _numFonts = 7;
-		private Bitmap _lcd; // Main rendering surface
+		
+		/// <summary>
+		/// This is the <see cref="Bitmap"/> image that will be rendered to the <see cref="_graphics"/> object.
+		/// </summary>
+		private Bitmap _lcd;
+
+		/// <summary>
+		/// The GDI+ Rendering Surface that will be created from the <see cref="_lcd"/> object.
+		/// </summary>
 		protected Graphics _graphics;
 		private Font _sysFont;
 		private readonly List<DisplayModule> _modules = new List<DisplayModule>();
 		private bool _disposed;
+
+		protected Rectangle _renderArea;
 
 		protected string[] _fontNames =
 		{
@@ -138,6 +159,8 @@ namespace GHud.Devices
 			get { return _useBackdrops; }
 			set { _useBackdrops = value; }
 		}
+
+		public Rectangle RenderArea { get { return _renderArea;} }
 		#endregion Properties
 
 		#region Events
@@ -151,6 +174,10 @@ namespace GHud.Devices
 		#endregion
 
 		#region Methods
+		/// <summary>
+		/// Determines if the device is currently valid for use.
+		/// </summary>
+		/// <returns>True if this device can currently be used, false otherwise.</returns>
 		public bool IsValid()
 		{
 			return _device != NativeMethods.LGLCD_INVALID_DEVICE;
@@ -213,8 +240,11 @@ namespace GHud.Devices
 			_graphics.DrawString(msg, _sysFont, invert ? _invertedTxtBrush : _defaultTxtBrush, x, y);
 		}
 
-		// Poorly named.  This simply clears the bitmap that will eventually be written to the LCD
-		public void ClearLcd(string msg = "")
+		/// <summary>
+		/// Clears the <see cref="_lcd"/> image object, setting every pixel to the <see cref="_clearColor"/> color. If a message is provided, it will also add this message to the display.
+		/// </summary>
+		/// <param name="msg">A message to be displayed.</param>
+		public void ClearLcdBitmap(string msg = "")
 		{
 			if (_graphics == null)
 			{
@@ -229,9 +259,12 @@ namespace GHud.Devices
 			}
 		}
 
-		public void DisplayFrame()
+		/// <summary>
+		/// This method outputs the <see cref="_graphics"/> object to the LCD display.
+		/// </summary>
+		public void RenderToLcdDisplay()
 		{
-			if (!_valid)
+			if (!_isInitialized)
 			{
 				return;
 			}
@@ -239,15 +272,12 @@ namespace GHud.Devices
 			NativeMethods.LcdUpdateBitmap(_device, bmp, _deviceType);
 		}
 
-		public Rectangle GetRect()
-		{
-			return new Rectangle(0, 0, _width, _height);
-		}
-
-		public void DoButtons()
+		/// <summary>
+		/// This method reads the currently pressed buttons and triggers the appropriate events.
+		/// </summary>
+		public void ReadButtons()
 		{
 			var buttons = NativeMethods.LcdReadSoftButtons(_device);
-
 			if (buttons == _lastButtons)
 			{
 				return;
@@ -305,6 +335,9 @@ namespace GHud.Devices
 			_lastButtons = buttons;
 		}
 
+		/// <summary>
+		/// Initializes the LCD Display.
+		/// </summary>
 		protected void InitLcd()
 		{
 			_connection = NativeMethods.LcdConnectEx("GHud", 0, 0);
@@ -319,14 +352,12 @@ namespace GHud.Devices
 			}
 
 			_lcd = new Bitmap(_width, _height);
-
 			_graphics = Graphics.FromImage(_lcd);
-
 			_graphics.TextRenderingHint = _renderHint;
 
-			ClearLcd("Initializing GHud...");
+			ClearLcdBitmap("GHud Initialized...");
 			NativeMethods.LcdSetAsLCDForegroundApp(_device, NativeMethods.LGLCD_FORE_YES);
-			_valid = true;
+			_isInitialized = true;
 		}
 		#endregion
 	}

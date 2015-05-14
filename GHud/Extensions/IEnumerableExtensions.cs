@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Drawing;
+using GHud.DataStructures;
 using GHud.Modules;
 
 namespace GHud.Extensions
@@ -15,7 +16,6 @@ namespace GHud.Extensions
 		///		This method is used to render a collection of <see cref="DisplayModule"/> instances for the provided <see cref="Vessel"/>.
 		/// </summary>
 		/// <param name="modules">The <see cref="IEnumerable{DisplayModule}"/> being extended.</param>
-		/// <param name="vessel">The active <see cref="Vessel"/> instance.</param>
 		public static void Render(this IEnumerable<DisplayModule> modules)
 		{
 #if !DEBUG
@@ -52,7 +52,7 @@ namespace GHud.Extensions
 
 				if (orbit != null)
 				{
-					dmod.SetOrbit(orbit, objName);
+					dmod.SetOrbit(new OrbitData(orbit), objName);
 				}
 #endif
 				dmod.Render(new Rectangle(0, 0, 0, 0));

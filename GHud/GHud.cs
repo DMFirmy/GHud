@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using GHud.Extensions;
+﻿using GHud.Extensions;
 using System;
 using System.Collections.Generic;
 using GHud.Devices;
@@ -23,21 +22,10 @@ namespace GHud
 		private List<Device> _devices = new List<Device>();
 		private static GHud _gHudMain;
 		private float _lastUpdate;
-		private int _config;
 		private bool _lcdInitialized;
 		#endregion
 
 		#region Public Methods
-		/// <summary>
-		/// This is the config callback for the <see cref="NativeMethods.LcdSetConfigCallback"/> method.
-		/// </summary>
-		/// <param name="connection">The connection that is issuing the callback.</param>
-		public void CfgCallback(int connection)
-		{
-			// NOTE: This method seems to be unused.
-			_config = connection;
-		}
-
 		/// <summary>
 		///     Awake is called when the script instance is being loaded.
 		/// </summary>
@@ -96,8 +84,7 @@ namespace GHud
 			{
 				_devices.Add(device);
 
-				DisplayModule module;
-				module = new VesselInfo(device);
+				DisplayModule module = new VesselInfo(device);
 				device.Modules.Add(module);
 				module.Activate();
 				
@@ -125,7 +112,7 @@ namespace GHud
 				dev.ButtonCancel += ButtonCancel;
 				dev.ButtonMenu += ButtonMenu;
 
-				dev.DisplayFrame();
+				dev.RenderToLcdDisplay();
 			}
 			#endregion
 		}
@@ -147,18 +134,19 @@ namespace GHud
 			{
 				foreach (var dev in _devices)
 				{
-					dev.ClearLcd("Waiting for Flight...");
-					dev.DisplayFrame();
+					dev.ClearLcdBitmap("Waiting for Flight...");
+					dev.RenderToLcdDisplay();
 				}
 				return;
 			}
 #endif
 			foreach (var dev in _devices)
 			{
-				dev.ClearLcd();
-				dev.DoButtons();
+				// TODO: This code should be refactored so that there is only a single call to a public method on the Device class. 
+				dev.ClearLcdBitmap();
+				dev.ReadButtons();
 				dev.Modules.Render();
-				dev.DisplayFrame();
+				dev.RenderToLcdDisplay();
 			}
 #if !DEBUG
 			_lastUpdate = Time.time;

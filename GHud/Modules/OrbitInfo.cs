@@ -49,11 +49,11 @@ namespace GHud.Modules
 			}
 
 #if !DEBUG
-			if (_orbit == null)
-			{
-				ModuleMsg(IsTargetTypeModule ? "No Target" : "Null Orbit", rect);
-				return;
-			}
+			//if (_orbit == null)
+			//{
+			//	ModuleMsg(IsTargetTypeModule ? "No Target" : "Null Orbit", rect);
+			//	return;
+			//}
 #endif
 
 			PrepData();
@@ -107,15 +107,15 @@ namespace GHud.Modules
 					break;
 			}
 
-			_orbitVelocityStr = _orbit.vel.magnitude.ToString("F2");
+			_orbitVelocityStr = _orbit.Velocity.ToString("F2");
 			_orbitApoapsisStr = Util.xMuMech_ToSI(_orbit.ApA, ref _orbApSuffix);
 			_orbitApoapsisStr += _orbApSuffix + "m";
 			_orbitPeriapsisStr = Util.xMuMech_ToSI(_orbit.PeA, ref _orbPeSuffix);
 			_orbitPeriapsisStr += _orbPeSuffix + "m";
-			_orbitInclinationStr = _orbit.inclination.ToString("F3") + "°";
-			_orbitApoapsisTimeStr = Util.ConvertInterval(_orbit.timeToAp, false);
-			_orbitPeriapsisTimeStr = Util.ConvertInterval(_orbit.timeToPe, false);
-			_orbBodyName = _orbit.referenceBody.GetName();
+			_orbitInclinationStr = _orbit.Inclination.ToString("F3") + "°";
+			_orbitApoapsisTimeStr = Util.ConvertInterval(_orbit.TimeToApoapsis, false);
+			_orbitPeriapsisTimeStr = Util.ConvertInterval(_orbit.TimeToApoapsis, false);
+			_orbBodyName = _orbit.OrbitedBodyName;
 #endif
 		}
 

@@ -8,9 +8,10 @@ namespace GHud.Devices
 		#region Constructors
 		public DeviceBw()
 		{
-			_valid = false;
+			_isInitialized = false;
 			_width = 160;
 			_height = 43;
+			_renderArea = new Rectangle(0, 0, _width, _height);
 			_isColor = false;
 			_fontPt = 7.0F;
 			_renderHint = TextRenderingHint.SingleBitPerPixelGridFit;
